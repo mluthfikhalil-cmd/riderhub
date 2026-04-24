@@ -30,6 +30,7 @@ const LoginScreen = ({ navigation }: any) => {
     setLoading(false);
 
     if (error) {
+      console.log('Login error:', error);
       Alert.alert('Login Failed', error.message);
     } else {
       Alert.alert('Success', 'Logged in successfully!');
@@ -132,9 +133,10 @@ const RegisterScreen = ({ navigation }: any) => {
     setLoading(false);
 
     if (error) {
+      console.log('Register error:', error);
       Alert.alert('Registration Failed', error.message);
     } else {
-      Alert.alert('Success', 'Check your email to verify your account!');
+      Alert.alert('Success', 'Check your email to verify your account!\n\nDont forget to check spam folder.');
     }
   };
 
