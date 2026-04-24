@@ -1,11 +1,18 @@
 // Simple local storage auth - works without Supabase dashboard access
 // This is a fallback that stores users locally in the browser
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 const STORAGE_KEY = 'riderhub_users';
 const SESSION_KEY = 'riderhub_session';
 
+// Type for stored user
+interface StoredUser {
+  password: string;
+  createdAt: string;
+}
+
 // Helper to get users from localStorage
-const getStoredUsers = (): Record<string, { password: string, createdAt: string }> => {
+const getStoredUsers = (): Record<string, StoredUser> => {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     return stored ? JSON.parse(stored) : {};
