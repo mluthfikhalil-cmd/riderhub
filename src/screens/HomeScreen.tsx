@@ -1,9 +1,14 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Alert } from 'react-native';
 import { Card, Badge, SectionTitle } from '../components';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
+import { useAuth } from '../context/AuthContext';
 
-const HomeScreen = () => {
+const HomeScreen = ({ navigation }: any) => {
+  const { user } = useAuth();
+  const displayName = user?.user_metadata?.name || user?.email?.split('@')[0] || 'Rider';
+  const displayMotor = user?.user_metadata?.motor || 'Honda CBR150R';
+
   // Mock data
   const nearbyEvents = [
     { id: 1, title: 'Honda Big Ride 2026', location: 'Jakarta', date: '15 Mei 2026', participants: 234 },
@@ -24,22 +29,22 @@ const HomeScreen = () => {
         <View style={styles.header}>
           <View>
             <Text style={styles.greeting}>Good Morning,</Text>
-            <Text style={styles.username}>Mas Rider 👋</Text>
+            <Text style={styles.username}>{displayName} 👋</Text>
           </View>
-          <TouchableOpacity style={styles.notificationButton}>
+          <TouchableOpacity style={styles.notificationButton} onPress={() => Alert.alert('Notifikasi', 'Belum ada notifikasi baru.')}>
             <Text style={styles.notificationIcon}>🔔</Text>
             <View style={styles.notificationDot} />
           </TouchableOpacity>
         </View>
 
         {/* Motor Profile Card */}
-        <Card style={styles.motorCard}>
+        <Card style={styles.motorCard} onPress={() => navigation.navigate('Garage')}>
           <View style={styles.motorCardContent}>
             <View style={styles.motorIcon}>
               <Text style={styles.motorEmoji}>🏍️</Text>
             </View>
             <View style={styles.motorInfo}>
-              <Text style={styles.motorName}>Honda CBR150R</Text>
+              <Text style={styles.motorName}>{displayMotor}</Text>
               <Text style={styles.motorPlate}>B 1234 XYZ</Text>
             </View>
             <Badge label="Aktif" variant="success" />
@@ -47,26 +52,26 @@ const HomeScreen = () => {
         </Card>
 
         {/* Quick Stats */}
-        <SectionTitle title="📊 Stats Mingguan" />
+        <SectionTitle title="📊 Stats Mingguan" action="Detail" onPress={() => navigation.navigate('RideHistory')} />
         <View style={styles.statsContainer}>
           {quickStats.map((stat, index) => (
-            <View key={index} style={styles.statCard}>
+            <TouchableOpacity key={index} style={styles.statCard} onPress={() => navigation.navigate('RideHistory')}>
               <Text style={styles.statValue}>{stat.value}</Text>
               <Text style={styles.statUnit}>{stat.unit}</Text>
               <Text style={styles.statLabel}>{stat.label}</Text>
-            </View>
+            </TouchableOpacity>
           ))}
         </View>
 
         {/* Nearby Events */}
-        <SectionTitle title="🎉 Event Terdekat" action="Lihat Semua" />
+        <SectionTitle title="🎉 Event Terdekat" action="Lihat Semua" onPress={() => navigation.navigate('Events')} />
         <ScrollView 
           horizontal 
           showsHorizontalScrollIndicator={false}
           style={styles.eventsScroll}
         >
           {nearbyEvents.map((event) => (
-            <Card key={event.id} style={styles.eventCard}>
+            <Card key={event.id} style={styles.eventCard} onPress={() => navigation.navigate('Events')}>
               <View style={styles.eventBadge}>
                 <Badge label={event.location} variant="info" />
               </View>
@@ -82,21 +87,21 @@ const HomeScreen = () => {
         {/* Quick Actions */}
         <SectionTitle title="⚡ Quick Actions" />
         <View style={styles.quickActions}>
-          <TouchableOpacity style={styles.actionButton}>
-            <Text style={styles.actionIcon}>⛽</Text>
-            <Text style={styles.actionLabel}>Isi Bensin</Text>
+          <TouchableOpacity style={styles.actionButton} onPress={() => navigation.navigate('RideHistory')}>
+            <Text style={styles.actionIcon}>🗺️</Text>
+            <Text style={styles.actionLabel}>History</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton}>
+          <TouchableOpacity style={styles.actionButton} onPress={() => navigation.navigate('Garage')}>
             <Text style={styles.actionIcon}>🔧</Text>
-            <Text style={styles.actionLabel}>Service</Text>
+            <Text style={styles.actionLabel}>Garage</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton}>
+          <TouchableOpacity style={styles.actionButton} onPress={() => navigation.navigate('Insurance')}>
+            <Text style={styles.actionIcon}>🛡️</Text>
+            <Text style={styles.actionLabel}>Insurance</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.actionButton} onPress={() => navigation.navigate('Parts')}>
             <Text style={styles.actionIcon}>🛒</Text>
-            <Text style={styles.actionLabel}>Cari Parts</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton}>
-            <Text style={styles.actionIcon}>📍</Text>
-            <Text style={styles.actionLabel}>Cari SPBU</Text>
+            <Text style={styles.actionLabel}>Shop</Text>
           </TouchableOpacity>
         </View>
 
@@ -119,7 +124,6 @@ const HomeScreen = () => {
           </View>
         </Card>
 
-        {/* Bottom spacing */}
         <View style={styles.bottomSpace} />
       </ScrollView>
     </SafeAreaView>

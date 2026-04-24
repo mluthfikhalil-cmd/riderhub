@@ -124,7 +124,13 @@ export const Input: React.FC<InputProps> = ({
       {label && <Text style={styles.inputLabel}>{label}</Text>}
       <View style={styles.inputWrapper}>
         {icon && <View style={styles.inputIcon}>{icon}</View>}
-        <Text style={styles.inputPlaceholder}>{placeholder}</Text>
+        <TextInput
+          style={styles.inputField}
+          placeholder={placeholder}
+          placeholderTextColor={colors.textMuted}
+          value={value}
+          onChangeText={onChangeText}
+        />
       </View>
     </View>
   );
@@ -247,10 +253,11 @@ const styles = StyleSheet.create({
   inputIcon: {
     marginRight: spacing.sm,
   },
-  inputPlaceholder: {
+  inputField: {
     flex: 1,
     fontSize: fontSize.md,
-    color: colors.textMuted,
+    color: colors.text,
+    paddingVertical: 0,
   },
 
   // Section title styles

@@ -1,29 +1,68 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Modal, TextInput, Alert, Platform } from 'react-native';
 import { Card, Badge } from '../components';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
 import { useAuth } from '../context/AuthContext';
+import { supabase } from '../lib/supabase';
 
 const ProfileScreen = () => {
-  const { user, localUser, isLocalAuth, signOut } = useAuth();
+  const { user, signOut } = useAuth();
   
+  const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+  const [editName, setEditName] = useState(user?.user_metadata?.name || user?.email?.split('@')[0] || '');
+  const [editMotor, setEditMotor] = useState(user?.user_metadata?.motor || 'Honda CBR250RR');
+  const [updating, setUpdating] = useState(false);
+
   // Get user display name
-  const displayName = localUser?.name || user?.user_metadata?.name || user?.email?.split('@')[0] || 'Rider';
-  const displayEmail = localUser?.email || user?.email || '';
+  const displayName = user?.user_metadata?.name || user?.email?.split('@')[0] || 'Rider';
+  const displayEmail = user?.email || '';
+  const displayMotor = user?.user_metadata?.motor || 'Honda CBR250RR';
   
+  const handleEdit = () => {
+    setIsEditModalVisible(true);
+  };
+
+  const handleSaveProfile = async () => {
+    setUpdating(true);
+    try {
+      const { data, error } = await supabase.auth.updateUser({
+        data: { name: editName, motor: editMotor }
+      });
+      if (error) throw error;
+      Alert.alert('Sukses', 'Profil berhasil diperbarui!');
+      setIsEditModalVisible(false);
+    } catch (err: any) {
+      Alert.alert('Error', err.message);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    if (Platform.OS === 'web') {
+      if (window.confirm('Apakah Anda yakin ingin keluar?')) {
+        await signOut();
+      }
+    } else {
+      Alert.alert('Logout', 'Apakah Anda yakin ingin keluar?', [
+        { text: 'Batal', style: 'cancel' },
+        { text: 'Keluar', style: 'destructive', onPress: async () => await signOut() }
+      ]);
+    }
+  };
+
   const menuItems = [
-    { icon: '🏍️', label: 'Motor Saya', value: 'Honda CBR150R' },
-    { icon: '📊', label: 'Statistik', value: '127 rides' },
-    { icon: '💰', label: 'Total Pengeluaran', value: 'Rp 2.4M' },
-    { icon: '📍', label: 'Total Jarak', value: '3,420 km' },
+    { icon: '🏍️', label: 'Motor Saya', value: displayMotor, action: () => navigation.navigate('Garage') },
+    { icon: '🗺️', label: 'Ride History', value: '127 rides', action: () => navigation.navigate('RideHistory') },
+    { icon: '🛡️', label: 'Asuransi & Dokumen', value: '3 Aktif', action: () => navigation.navigate('Insurance') },
+    { icon: '📍', label: 'Total Jarak', value: '3,420 km', action: () => Alert.alert('Jarak', 'Fitur tracking jarak segera hadir!') },
   ];
 
   const settingsMenu = [
-    { icon: '⚙️', label: 'Pengaturan', arrow: '>' },
-    { icon: '🔔', label: 'Notifikasi', arrow: '>' },
-    { icon: '🔐', label: 'Privasi & Keamanan', arrow: '>' },
-    { icon: '❓', label: 'Bantuan', arrow: '>' },
-    { icon: '📝', label: 'Syarat & Ketentuan', arrow: '>' },
+    { icon: '⚙️', label: 'Pengaturan', arrow: '>', action: () => handleEdit() },
+    { icon: '🛡️', label: 'Insurance & Docs', arrow: '>', action: () => navigation.navigate('Insurance') },
+    { icon: '🔔', label: 'Notifikasi', arrow: '>', action: () => Alert.alert('Notifikasi', 'Belum ada notifikasi baru.') },
+    { icon: '❓', label: 'Bantuan', arrow: '>', action: () => Alert.alert('Bantuan', 'Silakan hubungi support@riderhub.id') },
   ];
 
   const stats = [
@@ -33,13 +72,15 @@ const ProfileScreen = () => {
     { label: 'Events', value: '12' },
   ];
 
+  if (!user) return null;
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>👤 Profil</Text>
-          <TouchableOpacity style={styles.editButton}>
+          <TouchableOpacity style={styles.editButton} onPress={handleEdit}>
             <Text style={styles.editButtonText}>Edit</Text>
           </TouchableOpacity>
         </View>
@@ -48,8 +89,10 @@ const ProfileScreen = () => {
         <Card style={styles.profileCard}>
           <View style={styles.profileHeader}>
             <View style={styles.avatarContainer}>
-              <Text style={styles.avatar}>🧑</Text>
-              <TouchableOpacity style={styles.cameraButton}>
+              <View style={styles.avatarCircle}>
+                <Text style={styles.avatarText}>{displayName[0].toUpperCase()}</Text>
+              </View>
+              <TouchableOpacity style={styles.cameraButton} onPress={handleEdit}>
                 <Text style={styles.cameraIcon}>📷</Text>
               </TouchableOpacity>
             </View>
@@ -73,17 +116,17 @@ const ProfileScreen = () => {
         </Card>
 
         {/* Motor Info */}
-        <Card style={styles.motorCard}>
+        <Card style={styles.motorCard} onPress={() => navigation.navigate('Garage')}>
           <View style={styles.motorHeader}>
             <View style={styles.motorIcon}>
               <Text style={styles.motorEmoji}>🏍️</Text>
             </View>
             <View style={styles.motorDetails}>
-              <Text style={styles.motorName}>Honda CBR150R</Text>
+              <Text style={styles.motorName}>{displayMotor}</Text>
               <Text style={styles.motorPlate}>B 1234 XYZ</Text>
               <Text style={styles.motorYear}>2022 • Sport</Text>
             </View>
-            <TouchableOpacity style={styles.changeButton}>
+            <TouchableOpacity style={styles.changeButton} onPress={() => navigation.navigate('Garage')}>
               <Text style={styles.changeButtonText}>Ganti</Text>
             </TouchableOpacity>
           </View>
@@ -92,7 +135,7 @@ const ProfileScreen = () => {
         {/* Quick Info */}
         <View style={styles.quickInfo}>
           {menuItems.map((item, index) => (
-            <TouchableOpacity key={index} style={styles.quickItem}>
+            <TouchableOpacity key={index} style={styles.quickItem} onPress={item.action}>
               <Text style={styles.quickIcon}>{item.icon}</Text>
               <View style={styles.quickContent}>
                 <Text style={styles.quickLabel}>{item.label}</Text>
@@ -123,7 +166,7 @@ const ProfileScreen = () => {
               <Text style={styles.earningsStatLabel}>Event</Text>
             </View>
           </View>
-          <TouchableOpacity style={styles.withdrawButton}>
+          <TouchableOpacity style={styles.withdrawButton} onPress={() => Alert.alert('Tarik Dana', 'Fungsi penarikan dana sedang dalam pengembangan.')}>
             <Text style={styles.withdrawText}>Tarik Dana</Text>
           </TouchableOpacity>
         </Card>
@@ -132,7 +175,7 @@ const ProfileScreen = () => {
         <View style={styles.settingsSection}>
           <Text style={styles.settingsTitle}>⚙️ Pengaturan</Text>
           {settingsMenu.map((item, index) => (
-            <TouchableOpacity key={index} style={styles.settingsItem}>
+            <TouchableOpacity key={index} style={styles.settingsItem} onPress={item.action}>
               <Text style={styles.settingsIcon}>{item.icon}</Text>
               <Text style={styles.settingsLabel}>{item.label}</Text>
               <Text style={styles.settingsArrow}>{item.arrow}</Text>
@@ -143,11 +186,7 @@ const ProfileScreen = () => {
         {/* Logout Button */}
         <TouchableOpacity 
           style={styles.logoutButton}
-          onPress={async () => {
-            await signOut();
-            // Navigate to login - this will be handled by navigation state
-            window.location.href = '/login';
-          }}
+          onPress={handleLogout}
         >
           <Text style={styles.logoutIcon}>🚪</Text>
           <Text style={styles.logoutText}>Keluar</Text>
@@ -156,9 +195,44 @@ const ProfileScreen = () => {
         {/* App Version */}
         <Text style={styles.version}>RiderHub v1.0.0</Text>
 
-        {/* Bottom spacing */}
         <View style={styles.bottomSpace} />
       </ScrollView>
+
+      {/* Edit Profile Modal */}
+      <Modal visible={isEditModalVisible} animationType="slide" transparent={true}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Edit Profil</Text>
+            
+            <Text style={styles.inputLabel}>Nama Lengkap</Text>
+            <TextInput 
+              style={styles.modalInput} 
+              value={editName} 
+              onChangeText={setEditName} 
+              placeholder="Masukkan nama..."
+              placeholderTextColor={colors.textMuted}
+            />
+            
+            <Text style={styles.inputLabel}>Motor Utama</Text>
+            <TextInput 
+              style={styles.modalInput} 
+              value={editMotor} 
+              onChangeText={setEditMotor} 
+              placeholder="Contoh: Honda CBR250RR"
+              placeholderTextColor={colors.textMuted}
+            />
+            
+            <View style={styles.modalButtons}>
+              <TouchableOpacity style={styles.cancelBtn} onPress={() => setIsEditModalVisible(false)}>
+                <Text style={styles.cancelBtnText}>Batal</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.saveBtn} onPress={handleSaveProfile} disabled={updating}>
+                <Text style={styles.saveBtnText}>{updating ? 'Menyimpan...' : 'Simpan'}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -207,8 +281,20 @@ const styles = StyleSheet.create({
     position: 'relative',
     marginRight: spacing.md,
   },
-  avatar: {
-    fontSize: 64,
+  avatarCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: colors.primary + '20',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: colors.primary,
+  },
+  avatarText: {
+    fontSize: 32,
+    fontWeight: '700',
+    color: colors.primary,
   },
   cameraButton: {
     position: 'absolute',
@@ -450,6 +536,67 @@ const styles = StyleSheet.create({
   },
   bottomSpace: {
     height: 100,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: colors.overlay,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.md,
+  },
+  modalContent: {
+    width: '100%',
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.lg,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  modalTitle: {
+    fontSize: fontSize.xl,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: spacing.md,
+  },
+  inputLabel: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    marginBottom: spacing.xs,
+    marginTop: spacing.md,
+  },
+  modalInput: {
+    backgroundColor: colors.surfaceLight,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    color: colors.text,
+    fontSize: fontSize.md,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    marginTop: spacing.xl,
+  },
+  cancelBtn: {
+    flex: 1,
+    padding: spacing.md,
+    borderRadius: borderRadius.md,
+    alignItems: 'center',
+    backgroundColor: colors.surfaceLight,
+  },
+  cancelBtnText: {
+    color: colors.text,
+    fontWeight: '600',
+  },
+  saveBtn: {
+    flex: 2,
+    padding: spacing.md,
+    borderRadius: borderRadius.md,
+    alignItems: 'center',
+    backgroundColor: colors.primary,
+  },
+  saveBtnText: {
+    color: colors.background,
+    fontWeight: '700',
   },
 });
 
