@@ -129,14 +129,32 @@ const RegisterScreen = ({ navigation }: any) => {
     }
 
     setLoading(true);
-    const { error } = await signUp(email, password);
+    const { error, data } = await signUp(email, password);
     setLoading(false);
 
     if (error) {
-      console.log('Register error:', error);
-      Alert.alert('Registration Failed', error.message);
+      console.log('Register error details:', error);
+      
+      // Check specific error types
+      if (error.message.includes('already registered')) {
+        Alert.alert('Account Exists', 'This email is already registered.\n\nTry Login instead or use forgot password.');
+      } else if (error.message.includes('Valid email')) {
+        Alert.alert('Invalid Email', 'Please enter a valid email address.');
+      } else {
+        Alert.alert('Registration Failed', error.message);
+      }
     } else {
-      Alert.alert('Success', 'Check your email to verify your account!\n\nDont forget to check spam folder.');
+      // Check if email confirmation is needed
+      if (data?.user?.email_confirmed_at) {
+        // Email confirmed automatically - can login
+        Alert.alert('Success', 'Account created! You can now login.');
+      } else {
+        // Email confirmation needed
+        Alert.alert(
+          'Verify Email Required!', 
+          'Please check your email (' + email + ') and click the verification link.\n\nIf not received, check spam folder or try again in a few minutes.'
+        );
+      }
     }
   };
 
