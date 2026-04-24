@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { supabase } from '../lib/supabase';
+// @ts-ignore
+import { mockAuth } from '../lib/authLocal';
 import { User, Session } from '@supabase/supabase-js';
 
 interface AuthContextType {
@@ -18,49 +19,77 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Check for existing session on mount
   useEffect(() => {
-    // Check active session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+    const checkSession = async () => {
+      try {
+        const { data, error } = await mockAuth.getSession();
+        
+        if (error) {
+          console.log('Session check error:', error);
+          setLoading(false);
+          return;
+        }
+
+        if (data?.session) {
+          setSession(data.session);
+          setUser(data.session.user as User);
+        }
+      } catch (err) {
+        console.log('Session check failed:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkSession();
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+    const { data: { subscription } } = mockAuth.onAuthStateChange((event, sessionData) => {
+      console.log('Auth event:', event, sessionData);
+      
+      if (sessionData) {
+        setSession(sessionData);
+        setUser(sessionData.user as User);
+      } else {
+        setSession(null);
+        setUser(null);
+      }
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signUp = async (email: string, password: string) => {
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: typeof window !== 'undefined' ? window.location.origin : undefined,
-        }
-      });
+      // Convert email to lowercase for consistency
+      const normalizedEmail = email.toLowerCase().trim();
+      
+      // Check if user already exists
+      if (mockAuth.userExists(normalizedEmail)) {
+        return { 
+          error: new Error('This email is already registered. Please login instead.'), 
+          needsVerification: false 
+        };
+      }
+
+      const { data, error } = await mockAuth.signUp(normalizedEmail, password);
       
       if (error) {
         return { error: error as Error, needsVerification: false };
       }
-      
-      // If user is created and email is confirmed (no confirmation required)
-      if (data.user && data.session) {
+
+      // If sign up successful, user is automatically logged in
+      if (data.user) {
+        setUser(data.user);
+        setSession(data.session);
         return { error: null, needsVerification: false };
       }
-      
-      // If user is created but needs email confirmation
-      if (data.user && !data.session) {
-        return { error: null, needsVerification: true };
-      }
-      
-      return { error: null, needsVerification: true };
+
+      return { error: null, needsVerification: false };
     } catch (err) {
       return { error: err as Error, needsVerification: false };
     }
@@ -68,27 +97,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signIn = async (email: string, password: string) => {
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      const normalizedEmail = email.toLowerCase().trim();
+      
+      const { data, error } = await mockAuth.signInWithPassword(normalizedEmail, password);
       
       if (error) {
         return { error: error as Error };
       }
-      
-      if (!data.user) {
-        return { error: new Error('Invalid login credentials') };
+
+      if (data.user) {
+        setUser(data.user);
+        return { error: null };
       }
-      
-      return { error: null };
+
+      return { error: new Error('Login failed') };
     } catch (err) {
       return { error: err as Error };
     }
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    try {
+      await mockAuth.signOut();
+      setSession(null);
+      setUser(null);
+    } catch (err) {
+      console.log('Sign out error:', err);
+    }
   };
 
   return (
