@@ -1,25 +1,76 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, Text, TextInput, StyleSheet, ScrollView } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 
 const COLORS = {
   background: '#0D0D0D',
   surface: '#1A1A1A',
   primary: '#00D4AA',
+  secondary: '#FF6B35',
   text: '#FFFFFF',
   textSecondary: '#B0B0B0',
   textMuted: '#666666',
 };
 
-const LoginScreen = ({ navigation }: any) => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const { signIn } = useAuth();
+// Force button rendering with HTML
+const Button = ({ title, onPress, disabled, style, secondary }: any) => {
+  return (
+    <View style={style}>
+      <button
+        type="button"
+        onClick={onPress}
+        disabled={disabled}
+        style={{
+          backgroundColor: secondary ? COLORS.secondary : (disabled ? '#666' : COLORS.primary),
+          color: disabled ? '#999' : COLORS.background,
+          padding: 16,
+          borderRadius: 12,
+          border: 'none',
+          cursor: disabled ? 'not-allowed' : 'pointer',
+          fontSize: 16,
+          fontWeight: 700,
+          width: '100%',
+        }}
+      >
+        {title}
+      </button>
+    </View>
+  );
+};
 
-  const handleLogin = async () => {
+// Force link rendering with HTML
+const Link = ({ title, onPress, style }: any) => {
+  return (
+    <button
+      type="button"
+      onClick={onPress}
+      style={{
+        backgroundColor: 'transparent',
+        color: COLORS.primary,
+        border: 'none',
+        cursor: 'pointer',
+        fontSize: 14,
+        fontWeight: 600,
+        textDecoration: 'underline',
+        padding: 0,
+        margin: 0,
+        ...style,
+      }}
+    >
+      {title}
+    </button>
+  );
+};
+
+const LoginScreen = ({ navigation }: any) => {
+  const [email, setEmail] = useState('mluthfikhalil@gmail.com');
+  const [password, setPassword] = useState('123456');
+  const [loading, setLoading] = useState(false);
+  const { signIn, isLocalAuth } = useAuth();
+
+  const handleLogin = useCallback(async () => {
     if (!email.trim() || !password) {
-      Alert.alert('Error', 'Please enter email and password');
+      window.alert('Error: Please enter email and password');
       return;
     }
 
@@ -28,24 +79,31 @@ const LoginScreen = ({ navigation }: any) => {
     setLoading(false);
 
     if (error) {
-      if (error.message.includes('Invalid')) {
-        Alert.alert('Login Failed', 'Invalid email or password.\n\nPlease check your credentials and try again.');
-      } else if (error.message.includes('Email not confirmed')) {
-        Alert.alert('Verify Email', 'Please check your email and click the verification link first.');
+      if (error.message.includes('Invalid') || error.message.includes('credentials')) {
+        window.alert('Login Failed ❌\n\nInvalid email or password.\n\nPlease check your credentials or create a new account.');
       } else {
-        Alert.alert('Login Failed', error.message);
+        window.alert('Login Failed: ' + error.message);
       }
+      return;
     }
-    // If no error, navigation will automatically change to Home
-  };
+
+    // Success! Show welcome message and redirect to profile
+    window.alert('Login Successful! 🎉\n\nWelcome back, rider!');
+    
+    // Navigate to Profile (use window location for web)
+    if (typeof window !== 'undefined') {
+      window.location.href = '/profile';
+    }
+  }, [email, password, signIn, navigation]);
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+    <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
           <Text style={styles.logo}>🏍️</Text>
           <Text style={styles.title}>RiderHub</Text>
           <Text style={styles.subtitle}>Welcome back, rider!</Text>
+          {isLocalAuth && <Text style={styles.badge}>📱 Local Account</Text>}
         </View>
 
         <View style={styles.form}>
@@ -60,6 +118,9 @@ const LoginScreen = ({ navigation }: any) => {
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
+              submitBehavior="submit"
+              onSubmitEditing={handleLogin}
+              returnKeyType="done"
             />
           </View>
 
@@ -72,111 +133,110 @@ const LoginScreen = ({ navigation }: any) => {
               value={password}
               onChangeText={setPassword}
               secureTextEntry
+              submitBehavior="submit"
+              onSubmitEditing={handleLogin}
+              returnKeyType="done"
             />
           </View>
 
-          <TouchableOpacity 
-            style={[styles.button, loading && styles.buttonDisabled]} 
+          <Button
+            title={loading ? 'Logging in...' : 'Login'}
             onPress={handleLogin}
             disabled={loading}
-          >
-            <Text style={styles.buttonText}>
-              {loading ? 'Logging in...' : 'Login'}
-            </Text>
-          </TouchableOpacity>
+            style={styles.button}
+          />
         </View>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Don't have an account?</Text>
-          <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-            <Text style={styles.linkText}> Register</Text>
-          </TouchableOpacity>
+          <Text style={styles.footerText}>Don't have an account? </Text>
+          <Link
+            title="Register"
+            onPress={() => navigation.navigate('Register')}
+          />
         </View>
       </ScrollView>
-    </KeyboardAvoidingView>
+    </View>
   );
 };
 
 const RegisterScreen = ({ navigation }: any) => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('mluthfikhalil@gmail.com');
+  const [password, setPassword] = useState('123456');
+  const [confirmPassword, setConfirmPassword] = useState('123456');
   const [loading, setLoading] = useState(false);
-  const { signUp, signIn } = useAuth();
+  const { signUp, isLocalAuth } = useAuth();
 
-  const handleRegister = async () => {
-    // Validation
-    if (!email.trim() || !password || !confirmPassword) {
-      Alert.alert('Error', 'Please fill in all fields');
+  const handleRegister = useCallback(async () => {
+    if (!name.trim() || !email.trim() || !password || !confirmPassword) {
+      window.alert('Error: Please fill in all fields');
       return;
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email.trim())) {
-      Alert.alert('Error', 'Please enter a valid email address');
+      window.alert('Error: Please enter a valid email address');
       return;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
+      window.alert('Error: Passwords do not match');
       return;
     }
 
-    if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters');
+    if (password.length < 4) {
+      window.alert('Error: Password must be at least 4 characters');
       return;
     }
 
     setLoading(true);
     
-    // First, try to sign up
     const { error, needsVerification } = await signUp(email.trim(), password);
     
     if (error) {
       setLoading(false);
-      
-      // Handle specific errors
       if (error.message.includes('already registered')) {
-        Alert.alert('Account Exists', 'This email is already registered.\n\nTry Login instead.');
+        window.alert('Account Exists ⚠️\n\nThis email is already registered.\n\nTry Login instead.');
       } else {
-        Alert.alert('Registration Failed', error.message);
+        window.alert('Registration Failed: ' + error.message);
       }
       return;
     }
     
-    if (needsVerification) {
-      // Email confirmation required
-      setLoading(false);
-      Alert.alert(
-        'Verify Your Email', 
-        'We sent a verification link to your email (' + email + ').\n\nPlease check your inbox and click the link to activate your account.\n\n(Also check spam folder)',
-        [
-          { 
-            text: 'OK', 
-            onPress: () => navigation.navigate('Login') 
-          }
-        ]
-      );
-      return;
-    }
-    
-    // If no verification needed, try to sign in automatically
     setLoading(false);
-    Alert.alert('Success!', 'Account created! Navigating to app...', [
-      { text: 'OK' }
-    ]);
-  };
+    
+    // Success! Show welcome message and redirect to profile
+    window.alert('Welcome to RiderHub! 🎉\n\nAccount created successfully!\n\nYour rider profile is ready. Lets ride! 🏍️');
+    
+    // Navigate to Profile (use window location for web)
+    if (typeof window !== 'undefined') {
+      window.location.href = '/profile';
+    }
+  }, [name, email, password, confirmPassword, signUp, navigation]);
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+    <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
           <Text style={styles.logo}>🏍️</Text>
           <Text style={styles.title}>Join RiderHub</Text>
           <Text style={styles.subtitle}>Create your rider account</Text>
+          {isLocalAuth && <Text style={styles.badge}>📱 Creating Local Account</Text>}
         </View>
 
         <View style={styles.form}>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Your Name</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Your name"
+              placeholderTextColor={COLORS.textMuted}
+              value={name}
+              onChangeText={setName}
+              autoCapitalize="words"
+            />
+          </View>
+
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Email</Text>
             <TextInput
@@ -212,28 +272,30 @@ const RegisterScreen = ({ navigation }: any) => {
               value={confirmPassword}
               onChangeText={setConfirmPassword}
               secureTextEntry
+              submitBehavior="submit"
+              onSubmitEditing={handleRegister}
+              returnKeyType="done"
             />
           </View>
 
-          <TouchableOpacity 
-            style={[styles.button, loading && styles.buttonDisabled]} 
+          <Button
+            title={loading ? 'Creating account...' : 'Create Account'}
             onPress={handleRegister}
             disabled={loading}
-          >
-            <Text style={styles.buttonText}>
-              {loading ? 'Creating account...' : 'Create Account'}
-            </Text>
-          </TouchableOpacity>
+            style={styles.button}
+            secondary
+          />
         </View>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Already have an account?</Text>
-          <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-            <Text style={styles.linkText}> Login</Text>
-          </TouchableOpacity>
+          <Text style={styles.footerText}>Already have an account? </Text>
+          <Link
+            title="Login"
+            onPress={() => navigation.navigate('Login')}
+          />
         </View>
       </ScrollView>
-    </KeyboardAvoidingView>
+    </View>
   );
 };
 
@@ -244,16 +306,27 @@ const styles = StyleSheet.create({
   logo: { fontSize: 64, marginBottom: 16 },
   title: { fontSize: 32, fontWeight: '800', color: COLORS.text, marginBottom: 8 },
   subtitle: { fontSize: 16, color: COLORS.textSecondary },
+  badge: { 
+    marginTop: 12, 
+    fontSize: 12, 
+    color: COLORS.primary, 
+    backgroundColor: COLORS.surface,
+    padding: '6px 12px',
+    borderRadius: 20,
+  },
   form: { width: '100%' },
   inputGroup: { marginBottom: 20 },
   label: { fontSize: 14, fontWeight: '600', color: COLORS.text, marginBottom: 8 },
-  input: { backgroundColor: COLORS.surface, borderRadius: 12, padding: 16, fontSize: 16, color: COLORS.text },
-  button: { backgroundColor: COLORS.primary, borderRadius: 12, padding: 16, alignItems: 'center', marginTop: 10 },
-  buttonDisabled: { opacity: 0.6 },
-  buttonText: { fontSize: 16, fontWeight: '700', color: COLORS.background },
-  footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 30 },
+  input: { 
+    backgroundColor: COLORS.surface, 
+    borderRadius: 12, 
+    padding: 16, 
+    fontSize: 16, 
+    color: COLORS.text 
+  },
+  button: { marginTop: 10 },
+  footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 30, alignItems: 'center' },
   footerText: { fontSize: 14, color: COLORS.textSecondary },
-  linkText: { fontSize: 14, fontWeight: '600', color: COLORS.primary },
 });
 
 export { LoginScreen, RegisterScreen };

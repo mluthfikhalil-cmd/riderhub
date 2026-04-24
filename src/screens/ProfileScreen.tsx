@@ -2,8 +2,15 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView } from 'react-native';
 import { Card, Badge } from '../components';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
+import { useAuth } from '../context/AuthContext';
 
 const ProfileScreen = () => {
+  const { user, localUser, isLocalAuth, signOut } = useAuth();
+  
+  // Get user display name
+  const displayName = localUser?.name || user?.user_metadata?.name || user?.email?.split('@')[0] || 'Rider';
+  const displayEmail = localUser?.email || user?.email || '';
+  
   const menuItems = [
     { icon: '🏍️', label: 'Motor Saya', value: 'Honda CBR150R' },
     { icon: '📊', label: 'Statistik', value: '127 rides' },
@@ -47,8 +54,8 @@ const ProfileScreen = () => {
               </TouchableOpacity>
             </View>
             <View style={styles.profileInfo}>
-              <Text style={styles.userName}>Mas Rider</Text>
-              <Text style={styles.userEmail}>masrider@email.com</Text>
+              <Text style={styles.userName}>{displayName}</Text>
+              <Text style={styles.userEmail}>{displayEmail}</Text>
               <View style={styles.profileBadges}>
                 <Badge label="🏆 Pro Member" variant="success" />
                 <Badge label="Verified" variant="info" />
@@ -134,7 +141,14 @@ const ProfileScreen = () => {
         </View>
 
         {/* Logout Button */}
-        <TouchableOpacity style={styles.logoutButton}>
+        <TouchableOpacity 
+          style={styles.logoutButton}
+          onPress={async () => {
+            await signOut();
+            // Navigate to login - this will be handled by navigation state
+            window.location.href = '/login';
+          }}
+        >
           <Text style={styles.logoutIcon}>🚪</Text>
           <Text style={styles.logoutText}>Keluar</Text>
         </TouchableOpacity>
