@@ -6,7 +6,7 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
-  signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
+  signUp: (email: string, password: string) => Promise<{ error: Error | null; needsVerification: boolean }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
 }
@@ -38,17 +38,50 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signUp = async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.signUp({ email, password });
-      return { error: error as Error | null };
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: typeof window !== 'undefined' ? window.location.origin : undefined,
+        }
+      });
+      
+      if (error) {
+        return { error: error as Error, needsVerification: false };
+      }
+      
+      // If user is created and email is confirmed (no confirmation required)
+      if (data.user && data.session) {
+        return { error: null, needsVerification: false };
+      }
+      
+      // If user is created but needs email confirmation
+      if (data.user && !data.session) {
+        return { error: null, needsVerification: true };
+      }
+      
+      return { error: null, needsVerification: true };
     } catch (err) {
-      return { error: err as Error };
+      return { error: err as Error, needsVerification: false };
     }
   };
 
   const signIn = async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      return { error: error as Error | null };
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      
+      if (error) {
+        return { error: error as Error };
+      }
+      
+      if (!data.user) {
+        return { error: new Error('Invalid login credentials') };
+      }
+      
+      return { error: null };
     } catch (err) {
       return { error: err as Error };
     }

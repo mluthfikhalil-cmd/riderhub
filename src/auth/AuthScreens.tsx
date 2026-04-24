@@ -6,11 +6,9 @@ const COLORS = {
   background: '#0D0D0D',
   surface: '#1A1A1A',
   primary: '#00D4AA',
-  secondary: '#A78BFA',
   text: '#FFFFFF',
   textSecondary: '#B0B0B0',
   textMuted: '#666666',
-  error: '#EF4444',
 };
 
 const LoginScreen = ({ navigation }: any) => {
@@ -20,21 +18,25 @@ const LoginScreen = ({ navigation }: any) => {
   const { signIn } = useAuth();
 
   const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert('Error', 'Please fill all fields');
+    if (!email.trim() || !password) {
+      Alert.alert('Error', 'Please enter email and password');
       return;
     }
 
     setLoading(true);
-    const { error } = await signIn(email, password);
+    const { error } = await signIn(email.trim(), password);
     setLoading(false);
 
     if (error) {
-      console.log('Login error:', error);
-      Alert.alert('Login Failed', error.message);
-    } else {
-      Alert.alert('Success', 'Logged in successfully!');
+      if (error.message.includes('Invalid')) {
+        Alert.alert('Login Failed', 'Invalid email or password.\n\nPlease check your credentials and try again.');
+      } else if (error.message.includes('Email not confirmed')) {
+        Alert.alert('Verify Email', 'Please check your email and click the verification link first.');
+      } else {
+        Alert.alert('Login Failed', error.message);
+      }
     }
+    // If no error, navigation will automatically change to Home
   };
 
   return (
@@ -57,6 +59,7 @@ const LoginScreen = ({ navigation }: any) => {
               onChangeText={setEmail}
               keyboardType="email-address"
               autoCapitalize="none"
+              autoCorrect={false}
             />
           </View>
 
@@ -78,19 +81,8 @@ const LoginScreen = ({ navigation }: any) => {
             disabled={loading}
           >
             <Text style={styles.buttonText}>
-              {loading ? 'Loading...' : 'Login'}
+              {loading ? 'Logging in...' : 'Login'}
             </Text>
-          </TouchableOpacity>
-
-          <View style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>OR</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          <TouchableOpacity style={styles.socialButton}>
-            <Text style={styles.socialIcon}>G</Text>
-            <Text style={styles.socialText}>Continue with Google</Text>
           </TouchableOpacity>
         </View>
 
@@ -110,11 +102,18 @@ const RegisterScreen = ({ navigation }: any) => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signUp } = useAuth();
+  const { signUp, signIn } = useAuth();
 
   const handleRegister = async () => {
-    if (!email || !password || !confirmPassword) {
-      Alert.alert('Error', 'Please fill all fields');
+    // Validation
+    if (!email.trim() || !password || !confirmPassword) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      Alert.alert('Error', 'Please enter a valid email address');
       return;
     }
 
@@ -129,33 +128,43 @@ const RegisterScreen = ({ navigation }: any) => {
     }
 
     setLoading(true);
-    const { error, data } = await signUp(email, password);
-    setLoading(false);
-
+    
+    // First, try to sign up
+    const { error, needsVerification } = await signUp(email.trim(), password);
+    
     if (error) {
-      console.log('Register error details:', error);
+      setLoading(false);
       
-      // Check specific error types
+      // Handle specific errors
       if (error.message.includes('already registered')) {
-        Alert.alert('Account Exists', 'This email is already registered.\n\nTry Login instead or use forgot password.');
-      } else if (error.message.includes('Valid email')) {
-        Alert.alert('Invalid Email', 'Please enter a valid email address.');
+        Alert.alert('Account Exists', 'This email is already registered.\n\nTry Login instead.');
       } else {
         Alert.alert('Registration Failed', error.message);
       }
-    } else {
-      // Check if email confirmation is needed
-      if (data?.user?.email_confirmed_at) {
-        // Email confirmed automatically - can login
-        Alert.alert('Success', 'Account created! You can now login.');
-      } else {
-        // Email confirmation needed
-        Alert.alert(
-          'Verify Email Required!', 
-          'Please check your email (' + email + ') and click the verification link.\n\nIf not received, check spam folder or try again in a few minutes.'
-        );
-      }
+      return;
     }
+    
+    if (needsVerification) {
+      // Email confirmation required
+      setLoading(false);
+      Alert.alert(
+        'Verify Your Email', 
+        'We sent a verification link to your email (' + email + ').\n\nPlease check your inbox and click the link to activate your account.\n\n(Also check spam folder)',
+        [
+          { 
+            text: 'OK', 
+            onPress: () => navigation.navigate('Login') 
+          }
+        ]
+      );
+      return;
+    }
+    
+    // If no verification needed, try to sign in automatically
+    setLoading(false);
+    Alert.alert('Success!', 'Account created! Navigating to app...', [
+      { text: 'OK' }
+    ]);
   };
 
   return (
@@ -178,6 +187,7 @@ const RegisterScreen = ({ navigation }: any) => {
               onChangeText={setEmail}
               keyboardType="email-address"
               autoCapitalize="none"
+              autoCorrect={false}
             />
           </View>
 
@@ -211,7 +221,7 @@ const RegisterScreen = ({ navigation }: any) => {
             disabled={loading}
           >
             <Text style={styles.buttonText}>
-              {loading ? 'Loading...' : 'Register'}
+              {loading ? 'Creating account...' : 'Create Account'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -241,12 +251,6 @@ const styles = StyleSheet.create({
   button: { backgroundColor: COLORS.primary, borderRadius: 12, padding: 16, alignItems: 'center', marginTop: 10 },
   buttonDisabled: { opacity: 0.6 },
   buttonText: { fontSize: 16, fontWeight: '700', color: COLORS.background },
-  divider: { flexDirection: 'row', alignItems: 'center', marginVertical: 24 },
-  dividerLine: { flex: 1, height: 1, backgroundColor: COLORS.surface },
-  dividerText: { marginHorizontal: 16, color: COLORS.textMuted },
-  socialButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.surface, borderRadius: 12, padding: 16 },
-  socialIcon: { fontSize: 20, marginRight: 12 },
-  socialText: { fontSize: 16, color: COLORS.text },
   footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 30 },
   footerText: { fontSize: 14, color: COLORS.textSecondary },
   linkText: { fontSize: 14, fontWeight: '600', color: COLORS.primary },
