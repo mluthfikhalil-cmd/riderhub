@@ -387,7 +387,7 @@ const CommunityScreen = () => {
 // ============================================
 // PROFILE SCREEN
 // ============================================
-const ProfileScreen = () => {
+const ProfileScreen = ({ navigation }: any) => {
   const { user, signOut } = useAuth();
   
   const badges = [
@@ -415,6 +415,66 @@ const ProfileScreen = () => {
     ]);
   };
 
+  const handleLoginPrompt = () => {
+    Alert.alert('Login Required', 'Login to access all features!', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Login', onPress: () => navigation.navigate('Login') },
+    ]);
+  };
+
+  // If NOT logged in, show login prompt
+  if (!user) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
+          <View style={styles.screenHeader}>
+            <Text style={styles.screenTitle}>Profile</Text>
+          </View>
+
+          <View style={styles.profileCard}>
+            <Text style={styles.profileEmoji}>🏍️</Text>
+            <Text style={styles.profileName}>Welcome, Rider!</Text>
+            <Text style={styles.profileHandle}>Login to access all features</Text>
+            
+            <TouchableOpacity 
+              style={styles.loginButton} 
+              onPress={() => navigation.navigate('Login')}
+            >
+              <Text style={styles.loginButtonText}>Login</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.registerButton} 
+              onPress={() => navigation.navigate('Register')}
+            >
+              <Text style={styles.registerButtonText}>Create Account</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.guestMenu}>
+            <Text style={styles.sectionTitle}>Explore 🚀</Text>
+            <TouchableOpacity style={styles.menuItem} onPress={() => Alert.alert('Events', 'Browse events as guest')}>
+              <View style={styles.menuIcon}><Text>🎉</Text></View>
+              <Text style={styles.menuLabel}>Browse Events</Text>
+              <Text style={styles.menuArrow}>›</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.menuItem} onPress={() => Alert.alert('Parts', 'Browse parts as guest')}>
+              <View style={styles.menuIcon}><Text>🛒</Text></View>
+              <Text style={styles.menuLabel}>Browse Parts</Text>
+              <Text style={styles.menuArrow}>›</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.menuItem} onPress={() => Alert.alert('Community', 'Browse community as guest')}>
+              <View style={styles.menuIcon}><Text>👥</Text></View>
+              <Text style={styles.menuLabel}>Browse Community</Text>
+              <Text style={styles.menuArrow}>›</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  // If logged in, show profile
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
@@ -558,14 +618,10 @@ const AppNavigator = () => {
   return (
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {user ? (
-          <Stack.Screen name="Main" component={MainTabs} />
-        ) : (
-          <>
-            <Stack.Screen name="Login" component={LoginScreen} />
-            <Stack.Screen name="Register" component={RegisterScreen} />
-          </>
-        )}
+        {/* Always show main app - login is optional in Profile */}
+        <Stack.Screen name="Main" component={MainTabs} />
+        <Stack.Screen name="Login" component={LoginScreen} />
+        <Stack.Screen name="Register" component={RegisterScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
@@ -719,6 +775,14 @@ const styles = StyleSheet.create({
   menuLabel: { flex: 1, fontSize: 14, fontWeight: '500', color: COLORS.text },
   menuArrow: { fontSize: 20, color: COLORS.textMuted },
   logoutItem: { marginTop: 8, borderWidth: 1, borderColor: COLORS.error + '30' },
+  
+  // Login/Register buttons for guest
+  loginButton: { backgroundColor: COLORS.primary, borderRadius: 12, padding: 16, alignItems: 'center', marginTop: 20, width: '80%' },
+  loginButtonText: { fontSize: 16, fontWeight: '700', color: COLORS.background },
+  registerButton: { backgroundColor: COLORS.surface, borderRadius: 12, padding: 16, alignItems: 'center', marginTop: 10, width: '80%', borderWidth: 1, borderColor: COLORS.primary },
+  registerButtonText: { fontSize: 16, fontWeight: '600', color: COLORS.primary },
+  guestMenu: { paddingHorizontal: 20, marginTop: 24 },
+  profileEmoji: { fontSize: 48, marginBottom: 12 },
 
   tabBar: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: COLORS.surface, height: 80, paddingTop: 8, borderTopLeftRadius: 24, borderTopRightRadius: 24 },
   tabItem: { alignItems: 'center' },
