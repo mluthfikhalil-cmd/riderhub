@@ -907,6 +907,44 @@ const UserProfileScreen = ({ route, navigation }: any) => {
     );
   };
 
+  const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+  const [editName, setEditName] = useState(user?.user_name || '');
+  const [editMotor, setEditMotor] = useState(user?.motor || 'Honda CBR250RR');
+  const [updating, setUpdating] = useState(false);
+
+  const handleEdit = () => {
+    setIsEditModalVisible(true);
+  };
+
+  const handleSaveProfile = async () => {
+    setUpdating(true);
+    try {
+      const { data, error } = await supabase.auth.updateUser({
+        data: { name: editName, motor: editMotor }
+      });
+      if (error) throw error;
+      Alert.alert('Sukses', 'Profil berhasil diperbarui!');
+      setIsEditModalVisible(false);
+    } catch (err: any) {
+      Alert.alert('Error', err.message);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    if (Platform.OS === 'web') {
+      if (window.confirm('Apakah Anda yakin ingin keluar?')) {
+        await signOut();
+      }
+    } else {
+      Alert.alert('Logout', 'Apakah Anda yakin ingin keluar?', [
+        { text: 'Batal', style: 'cancel' },
+        { text: 'Keluar', style: 'destructive', onPress: async () => await signOut() }
+      ]);
+    }
+  };
+
   const handleMessage = () => {
     if (!authUser) {
       Alert.alert('Login Required', 'Please login to send messages');
@@ -919,9 +957,6 @@ const UserProfileScreen = ({ route, navigation }: any) => {
     Alert.alert('Share Profile', `Share ${user.user_name}'s profile?`);
   };
 
-  const handleEdit = () => {
-    Alert.alert('Edit Profile', 'Opening profile editor...');
-  };
 
   // Mock user data
   const userData = {
@@ -1024,7 +1059,7 @@ const UserProfileScreen = ({ route, navigation }: any) => {
         <View style={styles.screenHeader}>
           <View style={styles.profileHeaderRow}>
             <Text style={styles.screenTitle}>Profile</Text>
-            <TouchableOpacity style={styles.settingsBtn} onPress={() => Alert.alert('Settings', 'Settings')}>
+            <TouchableOpacity style={styles.settingsBtn} onPress={handleEdit}>
               <Text>⚙️</Text>
             </TouchableOpacity>
           </View>
@@ -1103,20 +1138,48 @@ const UserProfileScreen = ({ route, navigation }: any) => {
           </TouchableOpacity>
           
           {authUser && (
-            <TouchableOpacity style={[styles.menuItem, styles.logoutItem]} onPress={() => {
-              Alert.alert('Logout', 'Are you sure?', [
-                { text: 'Cancel', style: 'cancel' },
-                { text: 'Logout', style: 'destructive', onPress: async () => {
-                  const { signOut } = useAuth();
-                  await signOut();
-                }}
-              ]);
-            }}>
+            <TouchableOpacity style={[styles.menuItem, styles.logoutItem]} onPress={handleLogout}>
               <View style={[styles.menuIcon, { backgroundColor: COLORS.error + '15' }]}><Text>🚪</Text></View>
               <Text style={[styles.menuLabel, { color: COLORS.error }]}>Logout</Text>
             </TouchableOpacity>
           )}
         </View>
+
+        {/* Edit Profile Modal (UserProfileScreen) */}
+        <Modal visible={isEditModalVisible} animationType="slide" transparent={true}>
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Edit Profil</Text>
+              
+              <Text style={styles.inputLabel}>Nama Lengkap</Text>
+              <TextInput 
+                style={styles.modalInput} 
+                value={editName} 
+                onChangeText={setEditName} 
+                placeholder="Masukkan nama..."
+                placeholderTextColor={COLORS.textMuted}
+              />
+              
+              <Text style={styles.inputLabel}>Motor Utama</Text>
+              <TextInput 
+                style={styles.modalInput} 
+                value={editMotor} 
+                onChangeText={setEditMotor} 
+                placeholder="Contoh: Honda CBR250RR"
+                placeholderTextColor={COLORS.textMuted}
+              />
+              
+              <View style={styles.modalButtons}>
+                <TouchableOpacity style={styles.cancelBtn} onPress={() => setIsEditModalVisible(false)}>
+                  <Text style={styles.cancelBtnText}>Batal</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.saveBtn} onPress={handleSaveProfile} disabled={updating}>
+                  <Text style={styles.saveBtnText}>{updating ? 'Menyimpan...' : 'Simpan'}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
         <View style={{height: 100}} />
       </ScrollView>
     </SafeAreaView>
@@ -1188,9 +1251,9 @@ const ProfileScreen = ({ navigation }: any) => {
           <View style={styles.screenHeader}>
             <View style={styles.profileHeaderRow}>
               <Text style={styles.screenTitle}>Profile</Text>
-              <TouchableOpacity style={styles.settingsBtn} onPress={() => Alert.alert('Settings', 'Settings')}>
-                <Text>⚙️</Text>
-              </TouchableOpacity>
+            <TouchableOpacity style={styles.settingsBtn} onPress={handleEdit}>
+              <Text>⚙️</Text>
+            </TouchableOpacity>
             </View>
           </View>
 
