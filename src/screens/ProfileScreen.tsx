@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Modal, TextInput, Alert, Platform } from 'react-native';
-import { Card, Badge } from '../components';
+import { Card, Badge, Button } from '../components';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -50,15 +50,10 @@ const ProfileScreen = () => {
   };
 
   const handleLogout = async () => {
-    if (Platform.OS === 'web') {
-      if (window.confirm('Apakah Anda yakin ingin keluar?')) {
-        await signOut();
-      }
-    } else {
-      Alert.alert('Logout', 'Apakah Anda yakin ingin keluar?', [
-        { text: 'Batal', style: 'cancel' },
-        { text: 'Keluar', style: 'destructive', onPress: async () => await signOut() }
-      ]);
+    try {
+      await signOut();
+    } catch (err: any) {
+      Alert.alert('Error', 'Gagal logout: ' + err.message);
     }
   };
 
@@ -195,13 +190,13 @@ const ProfileScreen = () => {
         </View>
 
         {/* Logout Button */}
-        <TouchableOpacity 
-          style={styles.logoutButton}
-          onPress={handleLogout}
-        >
-          <Text style={styles.logoutIcon}>🚪</Text>
-          <Text style={styles.logoutText}>Keluar</Text>
-        </TouchableOpacity>
+        <Button 
+          title="Keluar" 
+          onPress={handleLogout} 
+          variant="secondary"
+          icon={<Text style={styles.logoutIcon}>🚪</Text>}
+          style={styles.logoutButtonModular}
+        />
 
         {/* App Version */}
         <Text style={styles.version}>RiderHub v1.0.0</Text>
@@ -529,6 +524,13 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     borderWidth: 1,
     borderColor: colors.error,
+  },
+  logoutButtonModular: {
+    marginTop: spacing.lg,
+    marginBottom: spacing.xl,
+    backgroundColor: colors.surface,
+    borderColor: colors.error,
+    borderWidth: 1,
   },
   logoutIcon: {
     fontSize: 20,

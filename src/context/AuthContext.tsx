@@ -301,6 +301,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // 2. Clear everything regardless of Supabase success
       localStorage.removeItem(LOCAL_USER_KEY);
       localStorage.removeItem(LOCAL_SESSION_KEY);
+      
+      if (typeof window !== 'undefined') {
+        sessionStorage.clear();
+      }
+
       // Clear password keys if any
       const keys = Object.keys(localStorage);
       keys.forEach(key => {
