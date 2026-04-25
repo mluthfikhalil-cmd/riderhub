@@ -109,26 +109,26 @@ const RideHistoryScreen = ({ navigation }: any) => {
   const handleStopTracking = async () => {
     stopTimer();
     if (locationSubscription.current) {
-      locationSubscription.current.remove();
+      try {
+        locationSubscription.current.remove();
+      } catch (e) {
+        console.log('Error removing subscription:', e);
+      }
     }
     
     const finalDuration = formatTime(elapsedSeconds);
     const finalDistance = currentDistance.toFixed(2) + ' km';
     
-    Alert.alert(
-      'Selesai Riding!',
-      `Jarak: ${finalDistance}\nDurasi: ${finalDuration}\nSimpan perjalanan ini?`,
-      [
-        { text: 'Buang', style: 'destructive', onPress: () => setIsTracking(false) },
-        { 
-          text: 'Simpan', 
-          onPress: async () => {
-            await saveRide(finalDistance, finalDuration);
-            setIsTracking(false);
-          } 
-        }
-      ]
-    );
+    // For Web, window.confirm is much more reliable than Alert.alert
+    const shouldSave = Platform.OS === 'web' 
+      ? window.confirm(`Selesai Riding!\nJarak: ${finalDistance}\nDurasi: ${finalDuration}\n\nSimpan perjalanan ini?`)
+      : true; // In native, we'll just save for now to avoid the Alert bug
+
+    if (shouldSave) {
+      await saveRide(finalDistance, finalDuration);
+    }
+    
+    setIsTracking(false);
   };
 
   const saveRide = async (distance: string, duration: string) => {

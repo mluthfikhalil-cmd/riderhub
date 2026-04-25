@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Modal, TextInput, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Modal, TextInput, Alert, ActivityIndicator, Platform } from 'react-native';
 import { Card, Badge, SectionTitle, Button } from '../components';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
 import { useAuth } from '../context/AuthContext';
@@ -57,33 +57,45 @@ const GarageScreen = ({ navigation }: any) => {
   };
 
   const handleAddBike = async () => {
+    if (!user?.id) {
+      const msg = 'Kamu harus login untuk menambah motor!';
+      Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Error', msg);
+      return;
+    }
+
     if (!brand || !model || !plate) {
-      Alert.alert('Error', 'Harap isi semua kolom wajib!');
+      const msg = 'Harap isi semua kolom wajib!';
+      Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Error', msg);
       return;
     }
 
     setSaving(true);
     try {
       const newBike = {
-        user_id: user?.id,
+        user_id: user.id,
         brand,
         model,
         plate_number: plate,
         year,
-        is_primary: bikes.length === 0, // First bike is primary
+        is_primary: bikes.length === 0,
       };
 
       const { error } = await supabase.from('bikes').insert([newBike]);
       
       if (error) throw error;
 
-      Alert.alert('Sukses', 'Motor berhasil ditambahkan ke garasi!');
+      const successMsg = 'Motor berhasil ditambahkan ke garasi!';
+      Platform.OS === 'web' ? window.alert(successMsg) : Alert.alert('Sukses', successMsg);
+      
       setIsModalVisible(false);
       resetForm();
       fetchBikes();
     } catch (err: any) {
-      Alert.alert('Info', 'Pastikan tabel "bikes" sudah dibuat di Supabase. Menampilkan secara lokal sementara...');
-      // Mock local add for preview
+      console.error('Save error:', err.message);
+      const errorMsg = 'Gagal menyimpan. Pastikan tabel "bikes" sudah dibuat di Supabase SQL Editor.';
+      Platform.OS === 'web' ? window.alert(errorMsg) : Alert.alert('Info', errorMsg);
+      
+      // Fallback local preview
       const mockBike: Bike = {
         id: Math.random().toString(),
         brand,
