@@ -34,8 +34,21 @@ const RideHistoryScreen = ({ navigation }: any) => {
     fetchRides();
     return () => {
       stopTimer();
+      // Safe cleanup for web
       if (locationSubscription.current) {
-        locationSubscription.current.remove();
+        try {
+          if (Platform.OS === 'web') {
+            // For web, we manually cleared it in stopTracking, or we do it here safely
+            if (typeof locationSubscription.current.remove === 'function') {
+              // Only call if it's our custom native watcher
+              locationSubscription.current.remove();
+            }
+          } else {
+            locationSubscription.current.remove();
+          }
+        } catch (e) {
+          console.log('Cleanup ignored');
+        }
       }
     };
   }, []);
@@ -130,11 +143,18 @@ const RideHistoryScreen = ({ navigation }: any) => {
     // Safety check for location subscription cleanup
     if (locationSubscription.current) {
       try {
-        if (typeof locationSubscription.current.remove === 'function') {
+        // On web, we only want to call remove if it's our native watcher
+        // library watcher on web is known to crash
+        if (Platform.OS === 'web') {
+          if (typeof locationSubscription.current.remove === 'function') {
+            locationSubscription.current.remove();
+          }
+        } else {
+          // Native mobile is safe
           locationSubscription.current.remove();
         }
       } catch (e) {
-        console.warn('Silent cleanup error:', e);
+        console.warn('Cleanup skipped to prevent crash');
       }
       locationSubscription.current = null;
     }
