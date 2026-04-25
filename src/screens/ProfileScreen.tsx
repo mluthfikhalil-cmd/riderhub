@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Modal, TextInput, Alert, Platform } from 'react-native';
-import { Card, Badge, Button } from '../components';
+import { Card, Badge } from '../components';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -25,12 +25,10 @@ const ProfileScreen = () => {
   const handleSaveProfile = async () => {
     setUpdating(true);
     try {
-      // 1. Update Supabase
       const { data, error } = await supabase.auth.updateUser({
         data: { name: editName, motor: editMotor }
       });
       if (error) throw error;
-
       Alert.alert('Sukses', 'Profil berhasil diperbarui!');
       setIsEditModalVisible(false);
     } catch (err: any) {
@@ -41,10 +39,15 @@ const ProfileScreen = () => {
   };
 
   const handleLogout = async () => {
-    try {
-      await signOut();
-    } catch (err: any) {
-      Alert.alert('Error', 'Gagal logout: ' + err.message);
+    if (Platform.OS === 'web') {
+      if (window.confirm('Apakah Anda yakin ingin keluar?')) {
+        await signOut();
+      }
+    } else {
+      Alert.alert('Logout', 'Apakah Anda yakin ingin keluar?', [
+        { text: 'Batal', style: 'cancel' },
+        { text: 'Keluar', style: 'destructive', onPress: async () => await signOut() }
+      ]);
     }
   };
 
@@ -181,13 +184,13 @@ const ProfileScreen = () => {
         </View>
 
         {/* Logout Button */}
-        <Button 
-          title="Keluar" 
-          onPress={handleLogout} 
-          variant="secondary"
-          icon={<Text style={styles.logoutIcon}>🚪</Text>}
-          style={styles.logoutButtonModular}
-        />
+        <TouchableOpacity 
+          style={styles.logoutButton}
+          onPress={handleLogout}
+        >
+          <Text style={styles.logoutIcon}>🚪</Text>
+          <Text style={styles.logoutText}>Keluar</Text>
+        </TouchableOpacity>
 
         {/* App Version */}
         <Text style={styles.version}>RiderHub v1.0.0</Text>
@@ -515,13 +518,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     borderWidth: 1,
     borderColor: colors.error,
-  },
-  logoutButtonModular: {
-    marginTop: spacing.lg,
-    marginBottom: spacing.xl,
-    backgroundColor: colors.surface,
-    borderColor: colors.error,
-    borderWidth: 1,
   },
   logoutIcon: {
     fontSize: 20,
