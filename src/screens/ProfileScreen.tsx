@@ -25,10 +25,21 @@ const ProfileScreen = () => {
   const handleSaveProfile = async () => {
     setUpdating(true);
     try {
+      // 1. Update Supabase
       const { data, error } = await supabase.auth.updateUser({
         data: { name: editName, motor: editMotor }
       });
       if (error) throw error;
+
+      // 2. Update Local Storage for instant UI update
+      const storedUser = localStorage.getItem('riderhub_user');
+      if (storedUser) {
+        const parsed = JSON.parse(storedUser);
+        parsed.name = editName;
+        parsed.motor = editMotor;
+        localStorage.setItem('riderhub_user', JSON.stringify(parsed));
+      }
+
       Alert.alert('Sukses', 'Profil berhasil diperbarui!');
       setIsEditModalVisible(false);
     } catch (err: any) {

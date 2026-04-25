@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User } from '@supabase/supabase-js';
+import { Platform } from 'react-native';
 
 interface AuthContextType {
   user: User | null;
@@ -40,10 +41,60 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLocalAuth, setIsLocalAuth] = useState(false);
   const [localUser, setLocalUser] = useState<LocalUser | null>(null);
 
-  // Load local session on mount
+  // Load session on mount and listen for changes
   useEffect(() => {
+    // 1. Initial check of local session
     checkLocalSession();
-  }, []);
+
+    // 2. Listen for Supabase auth changes
+    const initAuth = async () => {
+      try {
+        const { supabase } = await import('../lib/supabase');
+        
+        // Get current session
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        if (currentSession) {
+          setUser(currentSession.user);
+          setSession(currentSession as any);
+          setIsLocalAuth(false);
+          // Sync to local storage for persistence
+          syncToLocal(currentSession.user);
+        }
+
+        // Listen for changes (login, logout, update)
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+          if (session) {
+            setUser(session.user);
+            setSession(session as any);
+            setIsLocalAuth(false);
+            syncToLocal(session.user);
+          } else if (!isLocalAuth) {
+            // Only clear if we're not in local auth mode
+            setUser(null);
+            setSession(null);
+          }
+        });
+
+        return () => subscription.unsubscribe();
+      } catch (e) {
+        console.error('Auth listener error:', e);
+      }
+    };
+
+    initAuth();
+  }, [isLocalAuth]);
+
+  const syncToLocal = (user: User) => {
+    const localData: LocalUser = {
+      id: user.id,
+      email: user.email || '',
+      name: user.user_metadata?.name || user.email?.split('@')[0] || 'Rider',
+      bike: user.user_metadata?.motor,
+      createdAt: user.created_at,
+    };
+    localStorage.setItem(LOCAL_USER_KEY, JSON.stringify(localData));
+    setLocalUser(localData);
+  };
 
   const checkLocalSession = () => {
     try {
@@ -239,20 +290,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // SignOut
   const signOut = async () => {
-    // Clear local session
-    localStorage.removeItem(LOCAL_USER_KEY);
-    localStorage.removeItem(LOCAL_SESSION_KEY);
-    setLocalUser(null);
-    setIsLocalAuth(false);
-    setUser(null);
-    setSession(null);
-
-    // Try Supabase signOut (will fail silently if not logged in)
+    setLoading(true);
     try {
+      // 1. Try Supabase signOut
       const { supabase } = await import('../lib/supabase');
       await supabase.auth.signOut();
     } catch (e) {
-      // Ignore
+      console.error('Supabase signOut error:', e);
+    } finally {
+      // 2. Clear everything regardless of Supabase success
+      localStorage.removeItem(LOCAL_USER_KEY);
+      localStorage.removeItem(LOCAL_SESSION_KEY);
+      // Clear password keys if any
+      const keys = Object.keys(localStorage);
+      keys.forEach(key => {
+        if (key.startsWith('riderhub_password_')) {
+          localStorage.removeItem(key);
+        }
+      });
+
+      setLocalUser(null);
+      setIsLocalAuth(false);
+      setUser(null);
+      setSession(null);
+      setLoading(false);
+
+      // 3. Force reload on web to ensure clean state
+      if (typeof window !== 'undefined' && Platform.OS === 'web') {
+        window.location.href = '/';
+      }
     }
   };
 
