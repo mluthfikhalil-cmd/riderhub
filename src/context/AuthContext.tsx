@@ -247,11 +247,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       if (error) throw error;
       
-      setIsLocalAuth(false);
-      return { error: null, needsVerification: !!data.user };
+      // Check if email confirmation is required
+      const isConfirmed = data.user?.identities?.length ? data.session !== null : false;
+      const needsVerification = data.user && !data.session;
+
+      if (!needsVerification) {
+        setIsLocalAuth(false);
+        if (data.user) syncToLocal(data.user);
+      }
+      
+      return { error: null, needsVerification };
     } catch (supabaseError: any) {
       console.warn('Supabase signUp failed, trying local fallback:', supabaseError.message);
-      // Fallback to local
       return await localSignUp(email, password, name || email.split('@')[0]);
     }
   };
@@ -262,7 +269,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const { supabase } = await import('../lib/supabase');
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       
-      if (error) throw error;
+      if (error) {
+        if (error.message.includes('Email not confirmed')) {
+          throw new Error('Email kamu belum dikonfirmasi. Silakan cek inbox email kamu.');
+        }
+        throw error;
+      }
       
       setIsLocalAuth(false);
       if (data.user) syncToLocal(data.user);

@@ -205,12 +205,17 @@ const RegisterScreen = ({ navigation }: any) => {
     
     setLoading(false);
     
-    // Success! Show welcome message and redirect to profile
-    window.alert('Welcome to RiderHub! 🎉\n\nAccount created successfully!\n\nYour rider profile is ready. Lets ride! 🏍️');
-    
-    // Navigate to Profile (use window location for web)
-    if (typeof window !== 'undefined') {
-      window.location.href = '/profile';
+    if (needsVerification) {
+      window.alert('Registrasi Berhasil! 📧\n\nSilakan cek email kamu untuk mengonfirmasi akun sebelum login.');
+      navigation.navigate('Login');
+    } else {
+      // Success! Show welcome message and redirect to profile
+      window.alert('Welcome to RiderHub! 🎉\n\nAccount created successfully!\n\nYour rider profile is ready. Lets ride! 🏍️');
+      
+      // Navigate to Profile (use window location for web)
+      if (typeof window !== 'undefined') {
+        window.location.href = '/profile';
+      }
     }
   }, [name, email, password, confirmPassword, signUp, navigation]);
 
