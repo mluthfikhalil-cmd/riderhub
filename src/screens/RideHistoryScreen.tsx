@@ -108,21 +108,26 @@ const RideHistoryScreen = ({ navigation }: any) => {
 
   const handleStopTracking = async () => {
     stopTimer();
+    
+    // Safety check for location subscription cleanup
     if (locationSubscription.current) {
       try {
-        locationSubscription.current.remove();
+        if (typeof locationSubscription.current.remove === 'function') {
+          locationSubscription.current.remove();
+        }
       } catch (e) {
-        console.log('Error removing subscription:', e);
+        console.warn('Silent cleanup error:', e);
       }
+      locationSubscription.current = null;
     }
     
     const finalDuration = formatTime(elapsedSeconds);
     const finalDistance = currentDistance.toFixed(2) + ' km';
     
-    // For Web, window.confirm is much more reliable than Alert.alert
+    // Standard web confirm
     const shouldSave = Platform.OS === 'web' 
       ? window.confirm(`Selesai Riding!\nJarak: ${finalDistance}\nDurasi: ${finalDuration}\n\nSimpan perjalanan ini?`)
-      : true; // In native, we'll just save for now to avoid the Alert bug
+      : true;
 
     if (shouldSave) {
       await saveRide(finalDistance, finalDuration);
