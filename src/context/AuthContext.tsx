@@ -6,7 +6,7 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
-  signUp: (email: string, password: string) => Promise<{ error: Error | null; needsVerification: boolean }>;
+  signUp: (email: string, password: string, name?: string) => Promise<{ error: Error | null; needsVerification: boolean }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   // Local auth helpers
@@ -232,59 +232,46 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // SignUp - tries local first, then Supabase
-  const signUp = async (email: string, password: string) => {
-    // Try local signUp first
-    const result = await localSignUp(email, password, email.split('@')[0]);
-    
-    if (result.error) {
-      // Try Supabase as fallback
-      try {
-        const { supabase } = await import('../lib/supabase');
-        const { data, error } = await supabase.auth.signUp({ 
-          email, 
-          password,
-          options: {
-            emailRedirectTo: typeof window !== 'undefined' ? window.location.origin : undefined
-          }
-        });
-        
-        if (error) {
-          return { error: error as Error, needsVerification: !!data.user };
-        }
-        
-        setIsLocalAuth(false);
-        return { error: null, needsVerification: !!data.user };
-      } catch (e) {
-        return { error: result.error, needsVerification: false };
-      }
-    }
-    
-    return result;
-  };
-
-  // SignIn - tries local first, then Supabase
-  const signIn = async (email: string, password: string) => {
-    // Try local signIn first
-    const result = await localSignIn(email, password);
-    
-    if (!result.error) {
-      return { error: null };
-    }
-
-    // Try Supabase as fallback
+  // SignUp - tries Supabase first, then local as fallback
+  const signUp = async (email: string, password: string, name?: string) => {
     try {
       const { supabase } = await import('../lib/supabase');
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error } = await supabase.auth.signUp({ 
+        email, 
+        password,
+        options: {
+          data: { name: name || email.split('@')[0] },
+          emailRedirectTo: typeof window !== 'undefined' ? window.location.origin : undefined
+        }
+      });
       
-      if (error) {
-        return { error: error as Error };
-      }
+      if (error) throw error;
       
       setIsLocalAuth(false);
+      return { error: null, needsVerification: !!data.user };
+    } catch (supabaseError: any) {
+      console.warn('Supabase signUp failed, trying local fallback:', supabaseError.message);
+      // Fallback to local
+      return await localSignUp(email, password, name || email.split('@')[0]);
+    }
+  };
+
+  // SignIn - tries Supabase first, then local as fallback
+  const signIn = async (email: string, password: string) => {
+    try {
+      const { supabase } = await import('../lib/supabase');
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      
+      if (error) throw error;
+      
+      setIsLocalAuth(false);
+      if (data.user) syncToLocal(data.user);
       return { error: null };
-    } catch (e) {
-      return result;
+    } catch (supabaseError: any) {
+      console.warn('Supabase signIn failed, trying local fallback:', supabaseError.message);
+      // Try local fallback
+      const localResult = await localSignIn(email, password);
+      return localResult;
     }
   };
 

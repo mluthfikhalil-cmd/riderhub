@@ -191,7 +191,7 @@ const RegisterScreen = ({ navigation }: any) => {
 
     setLoading(true);
     
-    const { error, needsVerification } = await signUp(email.trim(), password);
+    const { error, needsVerification } = await signUp(email.trim(), password, name.trim());
     
     if (error) {
       setLoading(false);
