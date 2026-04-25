@@ -77,33 +77,51 @@ const RideHistoryScreen = ({ navigation }: any) => {
   };
 
   const handleStartTracking = async () => {
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission Denied', 'Akses lokasi diperlukan untuk tracking perjalanan.');
-      return;
-    }
-
     setIsTracking(true);
     setElapsedSeconds(0);
     setCurrentDistance(0);
     setCoordinates([]);
     startTimer();
 
-    // Start Location Watching
-    locationSubscription.current = await Location.watchPositionAsync(
-      {
-        accuracy: Location.Accuracy.Balanced,
-        timeInterval: 5000,
-        distanceInterval: 10,
-      },
-      (location) => {
-        setCoordinates(prev => [...prev, {
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
-          timestamp: location.timestamp
-        }]);
+    if (Platform.OS === 'web') {
+      // Use native browser geolocation for web to avoid expo-location bugs
+      const watchId = window.navigator.geolocation.watchPosition(
+        (position) => {
+          setCoordinates(prev => [...prev, {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+            timestamp: position.timestamp
+          }]);
+        },
+        (error) => console.error('Web Geolocation Error:', error),
+        { enableHighAccuracy: true }
+      );
+      locationSubscription.current = { remove: () => window.navigator.geolocation.clearWatch(watchId) };
+    } else {
+      // Use expo-location for native mobile
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Denied', 'Akses lokasi diperlukan untuk tracking perjalanan.');
+        setIsTracking(false);
+        stopTimer();
+        return;
       }
-    );
+
+      locationSubscription.current = await Location.watchPositionAsync(
+        {
+          accuracy: Location.Accuracy.Balanced,
+          timeInterval: 5000,
+          distanceInterval: 10,
+        },
+        (location) => {
+          setCoordinates(prev => [...prev, {
+            latitude: location.coords.latitude,
+            longitude: location.coords.longitude,
+            timestamp: location.timestamp
+          }]);
+        }
+      );
+    }
   };
 
   const handleStopTracking = async () => {
