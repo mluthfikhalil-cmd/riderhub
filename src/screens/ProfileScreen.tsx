@@ -1,603 +1,266 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Modal, TextInput, Alert, Platform } from 'react-native';
-import { Card, Badge } from '../components';
-import { colors, spacing, fontSize, borderRadius } from '../theme';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Modal, TextInput, RefreshControl } from 'react-native';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
+import { colors, spacing, fontSize, borderRadius } from '../theme';
+import { buildStats, ACHIEVEMENTS, fetchUserAchievements, getTierColor } from '../utils/achievements';
 
-const ProfileScreen = () => {
+const TeslaCard = ({ children, style, onPress }: any) => {
+  const W = onPress ? TouchableOpacity : View;
+  return (
+    <W style={[ts.card, style]} onPress={onPress} activeOpacity={0.85}>
+      {children}
+    </W>
+  );
+};
+
+export default function ProfileScreen({ navigation }: any) {
   const { user, signOut } = useAuth();
-  
-  const [isEditModalVisible, setIsEditModalVisible] = useState(false);
-  const [editName, setEditName] = useState(user?.user_metadata?.name || user?.email?.split('@')[0] || '');
-  const [editMotor, setEditMotor] = useState(user?.user_metadata?.motor || 'Honda CBR250RR');
-  const [updating, setUpdating] = useState(false);
-
-  // Get user display name
   const displayName = user?.user_metadata?.name || user?.email?.split('@')[0] || 'Rider';
-  const displayEmail = user?.email || '';
-  const displayMotor = user?.user_metadata?.motor || 'Honda CBR250RR';
-  
-  const handleEdit = () => {
-    setIsEditModalVisible(true);
-  };
+  const motorFromMeta = user?.user_metadata?.motor || '';
+
+  const [rides, setRides] = useState<any[]>([]);
+  const [bike, setBike] = useState<any>(null);
+  const [achIds, setAchIds] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Edit state
+  const [editModal, setEditModal] = useState(false);
+  const [editName, setEditName] = useState(displayName);
+  const [editBio, setEditBio] = useState(user?.user_metadata?.bio || '');
+  const [saving, setSaving] = useState(false);
+  const [saveMsg, setSaveMsg] = useState('');
+
+  const fetchData = useCallback(async () => {
+    if (!user?.id) return;
+    const [ridesRes, bikeRes, ids] = await Promise.all([
+      supabase.from('rides').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
+      supabase.from('bikes').select('*').eq('user_id', user.id).eq('is_primary', true).single(),
+      fetchUserAchievements(user.id),
+    ]);
+    if (ridesRes.data) setRides(ridesRes.data);
+    if (bikeRes.data) setBike(bikeRes.data);
+    setAchIds(ids);
+    setLoading(false); setRefreshing(false);
+  }, [user?.id]);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  const stats = buildStats(rides);
+  const recentBadges = ACHIEVEMENTS.filter(a => achIds.includes(a.id)).slice(0, 6);
 
   const handleSaveProfile = async () => {
-    setUpdating(true);
-    try {
-      const { data, error } = await supabase.auth.updateUser({
-        data: { name: editName, motor: editMotor }
-      });
-      if (error) throw error;
-      Alert.alert('Sukses', 'Profil berhasil diperbarui!');
-      setIsEditModalVisible(false);
-    } catch (err: any) {
-      Alert.alert('Error', err.message);
-    } finally {
-      setUpdating(false);
-    }
+    setSaving(true); setSaveMsg('');
+    const { error } = await supabase.auth.updateUser({
+      data: { name: editName.trim(), bio: editBio.trim() }
+    });
+    if (error) { setSaveMsg('Gagal: ' + error.message); }
+    else { setSaveMsg('✅ Profil tersimpan!'); setTimeout(() => { setEditModal(false); setSaveMsg(''); }, 1200); }
+    setSaving(false);
   };
 
-  const handleLogout = async () => {
-    if (Platform.OS === 'web') {
-      if (window.confirm('Apakah Anda yakin ingin keluar?')) {
-        await signOut();
-      }
-    } else {
-      Alert.alert('Logout', 'Apakah Anda yakin ingin keluar?', [
-        { text: 'Batal', style: 'cancel' },
-        { text: 'Keluar', style: 'destructive', onPress: async () => await signOut() }
-      ]);
-    }
-  };
+  const handleSignOut = async () => { await signOut(); };
 
-  const menuItems = [
-    { icon: '🏍️', label: 'Motor Saya', value: displayMotor, action: () => navigation.navigate('Garage') },
-    { icon: '🗺️', label: 'Ride History', value: '127 rides', action: () => navigation.navigate('RideHistory') },
-    { icon: '🛡️', label: 'Asuransi & Dokumen', value: '3 Aktif', action: () => navigation.navigate('Insurance') },
-    { icon: '📍', label: 'Total Jarak', value: '3,420 km', action: () => Alert.alert('Jarak', 'Fitur tracking jarak segera hadir!') },
-  ];
-
-  const settingsMenu = [
-    { icon: '⚙️', label: 'Pengaturan', arrow: '>', action: () => handleEdit() },
-    { icon: '🛡️', label: 'Insurance & Docs', arrow: '>', action: () => navigation.navigate('Insurance') },
-    { icon: '🔔', label: 'Notifikasi', arrow: '>', action: () => Alert.alert('Notifikasi', 'Belum ada notifikasi baru.') },
-    { icon: '❓', label: 'Bantuan', arrow: '>', action: () => Alert.alert('Bantuan', 'Silakan hubungi support@riderhub.id') },
-  ];
-
-  const stats = [
-    { label: 'Rides', value: '127' },
-    { label: 'Distance', value: '3,420 km' },
-    { label: 'Fuel', value: '186 L' },
-    { label: 'Events', value: '12' },
-  ];
-
-  if (!user) return null;
+  const motorLabel = bike ? `${bike.brand} ${bike.model}` : (motorFromMeta || 'Belum ada motor');
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.title}>👤 Profil</Text>
-          <TouchableOpacity style={styles.editButton} onPress={handleEdit}>
-            <Text style={styles.editButtonText}>Edit</Text>
-          </TouchableOpacity>
+    <SafeAreaView style={ts.container}>
+      <View style={ts.header}>
+        <View>
+          <Text style={ts.headerTitle}>Account</Text>
+          <Text style={ts.headerSubtitle}>Personal Profile & Statistics</Text>
         </View>
-
-        {/* Profile Card */}
-        <Card style={styles.profileCard}>
-          <View style={styles.profileHeader}>
-            <View style={styles.avatarContainer}>
-              <View style={styles.avatarCircle}>
-                <Text style={styles.avatarText}>{displayName[0].toUpperCase()}</Text>
-              </View>
-              <TouchableOpacity style={styles.cameraButton} onPress={handleEdit}>
-                <Text style={styles.cameraIcon}>📷</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={styles.profileInfo}>
-              <Text style={styles.userName}>{displayName}</Text>
-              <Text style={styles.userEmail}>{displayEmail}</Text>
-              <View style={styles.profileBadges}>
-                <Badge label="🏆 Pro Member" variant="success" />
-                <Badge label="Verified" variant="info" />
-              </View>
-            </View>
-          </View>
-          <View style={styles.profileStats}>
-            {stats.map((stat, index) => (
-              <View key={index} style={styles.statItem}>
-                <Text style={styles.statValue}>{stat.value}</Text>
-                <Text style={styles.statLabel}>{stat.label}</Text>
-              </View>
-            ))}
-          </View>
-        </Card>
-
-        {/* Motor Info */}
-        <Card style={styles.motorCard} onPress={() => navigation.navigate('Garage')}>
-          <View style={styles.motorHeader}>
-            <View style={styles.motorIcon}>
-              <Text style={styles.motorEmoji}>🏍️</Text>
-            </View>
-            <View style={styles.motorDetails}>
-              <Text style={styles.motorName}>{displayMotor}</Text>
-              <Text style={styles.motorPlate}>B 1234 XYZ</Text>
-              <Text style={styles.motorYear}>2022 • Sport</Text>
-            </View>
-            <TouchableOpacity style={styles.changeButton} onPress={() => navigation.navigate('Garage')}>
-              <Text style={styles.changeButtonText}>Ganti</Text>
-            </TouchableOpacity>
-          </View>
-        </Card>
-
-        {/* Quick Info */}
-        <View style={styles.quickInfo}>
-          {menuItems.map((item, index) => (
-            <TouchableOpacity key={index} style={styles.quickItem} onPress={item.action}>
-              <Text style={styles.quickIcon}>{item.icon}</Text>
-              <View style={styles.quickContent}>
-                <Text style={styles.quickLabel}>{item.label}</Text>
-                <Text style={styles.quickValue}>{item.value}</Text>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {/* Earnings Card */}
-        <Card style={styles.earningsCard}>
-          <View style={styles.earningsHeader}>
-            <Text style={styles.earningsTitle}>💰 Pendapatan Bulan Ini</Text>
-            <Badge label="+15%" variant="success" />
-          </View>
-          <Text style={styles.earningsAmount}>Rp 2.450.000</Text>
-          <View style={styles.earningsStats}>
-            <View style={styles.earningsStat}>
-              <Text style={styles.earningsStatValue}>45</Text>
-              <Text style={styles.earningsStatLabel}>Delivery</Text>
-            </View>
-            <View style={styles.earningsStat}>
-              <Text style={styles.earningsStatValue}>12</Text>
-              <Text style={styles.earningsStatLabel}>Touring</Text>
-            </View>
-            <View style={styles.earningsStat}>
-              <Text style={styles.earningsStatValue}>8</Text>
-              <Text style={styles.earningsStatLabel}>Event</Text>
-            </View>
-          </View>
-          <TouchableOpacity style={styles.withdrawButton} onPress={() => Alert.alert('Tarik Dana', 'Fungsi penarikan dana sedang dalam pengembangan.')}>
-            <Text style={styles.withdrawText}>Tarik Dana</Text>
-          </TouchableOpacity>
-        </Card>
-
-        {/* Settings Menu */}
-        <View style={styles.settingsSection}>
-          <Text style={styles.settingsTitle}>⚙️ Pengaturan</Text>
-          {settingsMenu.map((item, index) => (
-            <TouchableOpacity key={index} style={styles.settingsItem} onPress={item.action}>
-              <Text style={styles.settingsIcon}>{item.icon}</Text>
-              <Text style={styles.settingsLabel}>{item.label}</Text>
-              <Text style={styles.settingsArrow}>{item.arrow}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {/* Logout Button */}
-        <TouchableOpacity 
-          style={styles.logoutButton}
-          onPress={handleLogout}
-        >
-          <Text style={styles.logoutIcon}>🚪</Text>
-          <Text style={styles.logoutText}>Keluar</Text>
+        <TouchableOpacity style={ts.editBtn} onPress={() => { setEditName(displayName); setEditBio(user?.user_metadata?.bio || ''); setEditModal(true); }}>
+          <Ionicons name="settings-outline" size={22} color={colors.text} />
         </TouchableOpacity>
+      </View>
 
-        {/* App Version */}
-        <Text style={styles.version}>RiderHub v1.0.0</Text>
+      <ScrollView
+        contentContainerStyle={ts.scrollPadding}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchData(); }} tintColor={colors.accent} />}
+      >
+        {/* Avatar + Identity */}
+        <View style={ts.avatarSection}>
+          <View style={ts.avatarCircle}>
+            <Text style={ts.avatarInitial}>{displayName.charAt(0).toUpperCase()}</Text>
+          </View>
+          <Text style={ts.userName}>{displayName}</Text>
+          <Text style={ts.userEmail}>{user?.email}</Text>
+          {user?.user_metadata?.bio ? (
+            <Text style={ts.userBio}>{user.user_metadata.bio}</Text>
+          ) : null}
+          
+          <View style={ts.bikeBadge}>
+            <MaterialCommunityIcons name="motorbike" size={18} color={colors.accent} />
+            <Text style={ts.bikeBadgeText}>{loading ? '…' : motorLabel}</Text>
+          </View>
+        </View>
 
-        <View style={styles.bottomSpace} />
+        {/* Stats Grid */}
+        <TeslaCard style={ts.statsCard}>
+          <Text style={ts.sectionLabel}>LIFETIME STATISTICS</Text>
+          <View style={ts.statsGrid}>
+            <View style={ts.statItem}>
+              <Text style={ts.statValue}>{loading ? '…' : stats.totalRides}</Text>
+              <Text style={ts.statLabel}>RIDES</Text>
+            </View>
+            <View style={ts.statItem}>
+              <Text style={ts.statValue}>{loading ? '…' : stats.totalDistanceKm.toFixed(0)}</Text>
+              <Text style={ts.statLabel}>KM</Text>
+            </View>
+            <View style={ts.statItem}>
+              <Text style={ts.statValue}>{loading ? '…' : Math.round(stats.maxSpeedKmh)}</Text>
+              <Text style={ts.statLabel}>MAX SPD</Text>
+            </View>
+            <View style={ts.statItem}>
+              <Text style={ts.statValue}>{loading ? '…' : stats.longestRideKm.toFixed(0)}</Text>
+              <Text style={ts.statLabel}>LONGEST</Text>
+            </View>
+          </View>
+        </TeslaCard>
+
+        {/* Achievements Preview */}
+        <TeslaCard style={ts.badgeCard} onPress={() => navigation.navigate('Achievements')}>
+          <View style={ts.badgeHeader}>
+            <Text style={ts.sectionLabel}>RECENT BADGES</Text>
+            <Text style={ts.badgeCount}>{achIds.length}/{ACHIEVEMENTS.length}</Text>
+          </View>
+          
+          {recentBadges.length > 0 ? (
+            <View style={ts.badgeList}>
+              {recentBadges.map(a => (
+                <View key={a.id} style={ts.badgeIconWrapper}>
+                  <Text style={ts.badgeIcon}>{a.icon}</Text>
+                </View>
+              ))}
+            </View>
+          ) : (
+            <Text style={ts.emptyBadges}>Belum ada badge. Mulai riding! 🏍️</Text>
+          )}
+          <View style={ts.cardFooter}>
+            <Text style={ts.footerAction}>View All Badges</Text>
+            <Ionicons name="chevron-forward" size={14} color={colors.accent} />
+          </View>
+        </TeslaCard>
+
+        {/* Menu Items */}
+        <View style={ts.menuGroup}>
+          <TouchableOpacity style={ts.menuItem} onPress={() => navigation.navigate('Garage')}>
+            <MaterialCommunityIcons name="garage" size={20} color={colors.textSecondary} style={ts.menuIcon} />
+            <Text style={ts.menuText}>Garage Saya</Text>
+            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+          </TouchableOpacity>
+          <TouchableOpacity style={ts.menuItem} onPress={() => navigation.navigate('Leaderboard')}>
+            <MaterialCommunityIcons name="podium" size={20} color={colors.textSecondary} style={ts.menuIcon} />
+            <Text style={ts.menuText}>Leaderboard</Text>
+            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+          </TouchableOpacity>
+          <TouchableOpacity style={ts.menuItem} onPress={() => navigation.navigate('RideHistory')}>
+            <MaterialCommunityIcons name="history" size={20} color={colors.textSecondary} style={ts.menuIcon} />
+            <Text style={ts.menuText}>Riwayat Riding</Text>
+            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+          </TouchableOpacity>
+        </View>
+
+        <TouchableOpacity style={ts.signOutBtn} onPress={handleSignOut}>
+          <Text style={ts.signOutText}>SIGN OUT</Text>
+        </TouchableOpacity>
       </ScrollView>
 
       {/* Edit Profile Modal */}
-      <Modal visible={isEditModalVisible} animationType="slide" transparent={true}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Edit Profil</Text>
-            
-            <Text style={styles.inputLabel}>Nama Lengkap</Text>
-            <TextInput 
-              style={styles.modalInput} 
-              value={editName} 
-              onChangeText={setEditName} 
-              placeholder="Masukkan nama..."
-              placeholderTextColor={colors.textMuted}
-            />
-            
-            <Text style={styles.inputLabel}>Motor Utama</Text>
-            <TextInput 
-              style={styles.modalInput} 
-              value={editMotor} 
-              onChangeText={setEditMotor} 
-              placeholder="Contoh: Honda CBR250RR"
-              placeholderTextColor={colors.textMuted}
-            />
-            
-            <View style={styles.modalButtons}>
-              <TouchableOpacity style={styles.cancelBtn} onPress={() => setIsEditModalVisible(false)}>
-                <Text style={styles.cancelBtnText}>Batal</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.saveBtn} onPress={handleSaveProfile} disabled={updating}>
-                <Text style={styles.saveBtnText}>{updating ? 'Menyimpan...' : 'Simpan'}</Text>
+      <Modal visible={editModal} transparent animationType="slide">
+        <View style={ts.modalOverlay}>
+          <View style={ts.modalContent}>
+            <View style={ts.modalHeader}>
+              <Text style={ts.modalTitle}>Edit Profile</Text>
+              <TouchableOpacity onPress={() => setEditModal(false)}>
+                <Ionicons name="close" size={24} color={colors.text} />
               </TouchableOpacity>
             </View>
+
+            <View style={ts.fieldContainer}>
+              <Text style={ts.fieldLabel}>DISPLAY NAME</Text>
+              <TextInput style={ts.input} value={editName} onChangeText={setEditName} placeholder="Your name" placeholderTextColor={colors.textMuted} />
+            </View>
+
+            <View style={ts.fieldContainer}>
+              <Text style={ts.fieldLabel}>BIO</Text>
+              <TextInput style={[ts.input, ts.inputBio]} value={editBio} onChangeText={setEditBio} placeholder="Tell us about yourself..." placeholderTextColor={colors.textMuted} multiline />
+            </View>
+
+            {saveMsg ? <Text style={ts.saveMsg}>{saveMsg}</Text> : null}
+
+            <TouchableOpacity style={ts.saveBtn} onPress={handleSaveProfile} disabled={saving}>
+              <Text style={ts.saveBtnText}>{saving ? 'Saving...' : 'Save Changes'}</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
     </SafeAreaView>
   );
-};
+}
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  scrollView: {
-    flex: 1,
-    paddingHorizontal: spacing.md,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: spacing.lg,
-  },
-  title: {
-    fontSize: fontSize.xxl,
-    fontWeight: '700',
-    color: colors.text,
-  },
-  editButton: {
-    backgroundColor: colors.surface,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  editButtonText: {
-    fontSize: fontSize.md,
-    color: colors.text,
-  },
-  profileCard: {
-    marginBottom: spacing.md,
-  },
-  profileHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-  },
-  avatarContainer: {
-    position: 'relative',
-    marginRight: spacing.md,
-  },
-  avatarCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: colors.primary + '20',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: colors.primary,
-  },
-  avatarText: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: colors.primary,
-  },
-  cameraButton: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: colors.background,
-  },
-  cameraIcon: {
-    fontSize: 14,
-  },
-  profileInfo: {
-    flex: 1,
-  },
-  userName: {
-    fontSize: fontSize.xl,
-    fontWeight: '700',
-    color: colors.text,
-  },
-  userEmail: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-    marginBottom: spacing.sm,
-  },
-  profileBadges: {
-    flexDirection: 'row',
-    gap: spacing.xs,
-  },
-  profileStats: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingTop: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: colors.divider,
-  },
-  statItem: {
-    alignItems: 'center',
-  },
-  statValue: {
-    fontSize: fontSize.lg,
-    fontWeight: '700',
-    color: colors.primary,
-  },
-  statLabel: {
-    fontSize: fontSize.xs,
-    color: colors.textSecondary,
-    marginTop: 2,
-  },
-  motorCard: {
-    marginBottom: spacing.md,
-  },
-  motorHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  motorIcon: {
-    width: 60,
-    height: 60,
-    borderRadius: borderRadius.md,
-    backgroundColor: colors.surfaceLight,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: spacing.md,
-  },
-  motorEmoji: {
-    fontSize: 32,
-  },
-  motorDetails: {
-    flex: 1,
-  },
-  motorName: {
-    fontSize: fontSize.lg,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  motorPlate: {
-    fontSize: fontSize.md,
-    color: colors.primary,
-    marginTop: 2,
-  },
-  motorYear: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-    marginTop: 2,
-  },
-  changeButton: {
-    backgroundColor: colors.surfaceLight,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.md,
-  },
-  changeButtonText: {
-    fontSize: fontSize.sm,
-    color: colors.primary,
-    fontWeight: '500',
-  },
-  quickInfo: {
-    marginBottom: spacing.md,
-  },
-  quickItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    marginBottom: spacing.sm,
-  },
-  quickIcon: {
-    fontSize: 24,
-    marginRight: spacing.md,
-  },
-  quickContent: {
-    flex: 1,
-  },
-  quickLabel: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-  },
-  quickValue: {
-    fontSize: fontSize.md,
-    fontWeight: '600',
-    color: colors.text,
-    marginTop: 2,
-  },
-  earningsCard: {
-    backgroundColor: colors.surfaceLight,
-    marginBottom: spacing.md,
-  },
-  earningsHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.sm,
-  },
-  earningsTitle: {
-    fontSize: fontSize.md,
-    color: colors.textSecondary,
-  },
-  earningsAmount: {
-    fontSize: fontSize.xxxl,
-    fontWeight: '700',
-    color: colors.primary,
-    marginBottom: spacing.md,
-  },
-  earningsStats: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingVertical: spacing.md,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: colors.divider,
-    marginBottom: spacing.md,
-  },
-  earningsStat: {
-    alignItems: 'center',
-  },
-  earningsStatValue: {
-    fontSize: fontSize.xl,
-    fontWeight: '700',
-    color: colors.text,
-  },
-  earningsStatLabel: {
-    fontSize: fontSize.xs,
-    color: colors.textSecondary,
-    marginTop: 2,
-  },
-  withdrawButton: {
-    backgroundColor: colors.primary,
-    paddingVertical: spacing.md,
-    borderRadius: borderRadius.md,
-    alignItems: 'center',
-  },
-  withdrawText: {
-    fontSize: fontSize.lg,
-    fontWeight: '600',
-    color: colors.background,
-  },
-  settingsSection: {
-    marginBottom: spacing.lg,
-  },
-  settingsTitle: {
-    fontSize: fontSize.lg,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: spacing.md,
-  },
-  settingsItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    marginBottom: spacing.sm,
-  },
-  settingsIcon: {
-    fontSize: 20,
-    marginRight: spacing.md,
-  },
-  settingsLabel: {
-    flex: 1,
-    fontSize: fontSize.md,
-    color: colors.text,
-  },
-  settingsArrow: {
-    fontSize: fontSize.lg,
-    color: colors.textMuted,
-  },
-  logoutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    marginBottom: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.error,
-  },
-  logoutIcon: {
-    fontSize: 20,
-    marginRight: spacing.sm,
-  },
-  logoutText: {
-    fontSize: fontSize.lg,
-    fontWeight: '600',
-    color: colors.error,
-  },
-  version: {
-    textAlign: 'center',
-    fontSize: fontSize.sm,
-    color: colors.textMuted,
-    marginBottom: spacing.lg,
-  },
-  bottomSpace: {
-    height: 100,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: colors.overlay,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: spacing.md,
-  },
-  modalContent: {
-    width: '100%',
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.lg,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  modalTitle: {
-    fontSize: fontSize.xl,
-    fontWeight: '700',
-    color: colors.text,
-    marginBottom: spacing.md,
-  },
-  inputLabel: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-    marginBottom: spacing.xs,
-    marginTop: spacing.md,
-  },
-  modalInput: {
-    backgroundColor: colors.surfaceLight,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    color: colors.text,
-    fontSize: fontSize.md,
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    marginTop: spacing.xl,
-  },
-  cancelBtn: {
-    flex: 1,
-    padding: spacing.md,
-    borderRadius: borderRadius.md,
-    alignItems: 'center',
-    backgroundColor: colors.surfaceLight,
-  },
-  cancelBtnText: {
-    color: colors.text,
-    fontWeight: '600',
-  },
-  saveBtn: {
-    flex: 2,
-    padding: spacing.md,
-    borderRadius: borderRadius.md,
-    alignItems: 'center',
-    backgroundColor: colors.primary,
-  },
-  saveBtnText: {
-    color: colors.background,
-    fontWeight: '700',
-  },
+const ts = StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
+  header: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    paddingHorizontal: spacing.lg, 
+    paddingVertical: spacing.md 
+  },
+  headerTitle: { color: colors.text, fontSize: fontSize.xxl, fontWeight: '700' },
+  headerSubtitle: { color: colors.textSecondary, fontSize: fontSize.sm, marginTop: 2 },
+  editBtn: { padding: 4 },
+  scrollPadding: { paddingBottom: 100 },
+  avatarSection: { alignItems: 'center', marginVertical: spacing.xl },
+  avatarCircle: { width: 90, height: 90, borderRadius: 45, backgroundColor: '#111', justifyContent: 'center', alignItems: 'center', marginBottom: spacing.md },
+  avatarInitial: { color: colors.text, fontSize: fontSize.xxxl, fontWeight: '700' },
+  userName: { color: colors.text, fontSize: fontSize.xl, fontWeight: '700' },
+  userEmail: { color: colors.textSecondary, fontSize: fontSize.sm, marginTop: 4 },
+  userBio: { color: colors.textSecondary, fontSize: fontSize.sm, textAlign: 'center', marginTop: 12, paddingHorizontal: spacing.xxl, lineHeight: 20 },
+  bikeBadge: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#111', paddingHorizontal: 16, paddingVertical: 8, borderRadius: borderRadius.full, marginTop: spacing.lg },
+  bikeBadgeText: { color: colors.accent, fontSize: fontSize.sm, fontWeight: '600' },
+  card: { backgroundColor: colors.surface, borderRadius: borderRadius.lg, marginHorizontal: spacing.md, padding: spacing.lg, marginBottom: spacing.lg },
+  statsCard: { paddingVertical: spacing.lg },
+  sectionLabel: { color: colors.textMuted, fontSize: fontSize.xs, fontWeight: '700', letterSpacing: 1, marginBottom: spacing.lg },
+  statsGrid: { flexDirection: 'row', justifyContent: 'space-between' },
+  statItem: { alignItems: 'center', flex: 1 },
+  statValue: { color: colors.text, fontSize: fontSize.lg, fontWeight: '700' },
+  statLabel: { color: colors.textMuted, fontSize: 9, fontWeight: '700', marginTop: 4 },
+  badgeCard: { padding: spacing.lg },
+  badgeHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  badgeCount: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: '600' },
+  badgeList: { flexDirection: 'row', gap: 10, marginTop: spacing.xs },
+  badgeIconWrapper: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#111', justifyContent: 'center', alignItems: 'center' },
+  badgeIcon: { fontSize: 18 },
+  emptyBadges: { color: colors.textMuted, fontSize: fontSize.sm, textAlign: 'center', paddingVertical: spacing.sm },
+  cardFooter: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: spacing.md, alignSelf: 'flex-end' },
+  footerAction: { color: colors.accent, fontSize: fontSize.xs, fontWeight: '600' },
+  menuGroup: { marginTop: spacing.sm },
+  menuItem: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    paddingHorizontal: spacing.xl, 
+    paddingVertical: spacing.lg, 
+    borderBottomWidth: 1, 
+    borderBottomColor: '#111' 
+  },
+  menuIcon: { marginRight: spacing.md },
+  menuText: { flex: 1, color: colors.text, fontSize: fontSize.md, fontWeight: '500' },
+  signOutBtn: { marginHorizontal: spacing.md, marginTop: spacing.xxl, paddingVertical: 16, borderRadius: borderRadius.md, borderWidth: 1, borderColor: '#333', alignItems: 'center' },
+  signOutText: { color: colors.error, fontSize: fontSize.sm, fontWeight: '700', letterSpacing: 1 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'flex-end' },
+  modalContent: { backgroundColor: colors.surface, borderTopLeftRadius: borderRadius.xl, borderTopRightRadius: borderRadius.xl, padding: spacing.lg },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xl },
+  modalTitle: { color: colors.text, fontSize: fontSize.xl, fontWeight: '700' },
+  fieldContainer: { marginBottom: spacing.lg },
+  fieldLabel: { color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: '700', marginBottom: 8 },
+  input: { backgroundColor: '#111', borderRadius: borderRadius.md, padding: 12, color: colors.text, fontSize: fontSize.md },
+  inputBio: { height: 80, textAlignVertical: 'top' },
+  saveMsg: { color: colors.accent, fontSize: fontSize.sm, textAlign: 'center', marginBottom: spacing.md },
+  saveBtn: { backgroundColor: colors.text, paddingVertical: 16, borderRadius: borderRadius.md, alignItems: 'center', marginTop: spacing.md },
+  saveBtnText: { color: colors.background, fontSize: fontSize.md, fontWeight: '700' }
 });
-
-export default ProfileScreen;

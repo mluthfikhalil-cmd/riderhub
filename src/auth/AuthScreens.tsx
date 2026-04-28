@@ -1,332 +1,240 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, TextInput, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Platform, Dimensions } from 'react-native';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
+import { colors, spacing, fontSize, borderRadius } from '../theme';
 
-const COLORS = {
-  background: '#0D0D0D',
-  surface: '#1A1A1A',
-  primary: '#00D4AA',
-  secondary: '#FF6B35',
-  text: '#FFFFFF',
-  textSecondary: '#B0B0B0',
-  textMuted: '#666666',
-};
+const { width } = Dimensions.get('window');
 
-// Force button rendering with HTML
-const Button = ({ title, onPress, disabled, style, secondary }: any) => {
+const TeslaCard = ({ children, style, onPress }: any) => {
+  const W = onPress ? TouchableOpacity : View;
   return (
-    <View style={style}>
-      <button
-        type="button"
-        onClick={onPress}
-        disabled={disabled}
-        style={{
-          backgroundColor: secondary ? COLORS.secondary : (disabled ? '#666' : COLORS.primary),
-          color: disabled ? '#999' : COLORS.background,
-          padding: 16,
-          borderRadius: 12,
-          border: 'none',
-          cursor: disabled ? 'not-allowed' : 'pointer',
-          fontSize: 16,
-          fontWeight: 700,
-          width: '100%',
-        }}
-      >
-        {title}
-      </button>
-    </View>
+    <W style={[ts.card, style]} onPress={onPress} activeOpacity={0.85}>
+      {children}
+    </W>
   );
 };
 
-// Force link rendering with HTML
-const Link = ({ title, onPress, style }: any) => {
+const CustomButton = ({ title, onPress, loading, disabled, style, variant = 'primary' }: any) => {
+  const isOutline = variant === 'outline';
   return (
-    <button
-      type="button"
-      onClick={onPress}
-      style={{
-        backgroundColor: 'transparent',
-        color: COLORS.primary,
-        border: 'none',
-        cursor: 'pointer',
-        fontSize: 14,
-        fontWeight: 600,
-        textDecoration: 'underline',
-        padding: 0,
-        margin: 0,
-        ...style,
-      }}
+    <TouchableOpacity 
+      style={[
+        ts.btnBase, 
+        isOutline ? ts.btnOutline : ts.btnPrimary,
+        disabled && ts.btnDisabled,
+        style
+      ]}
+      onPress={onPress}
+      disabled={disabled || loading}
+      activeOpacity={0.8}
     >
-      {title}
-    </button>
+      <Text style={[ts.btnText, isOutline && ts.btnTextOutline]}>
+        {loading ? 'PROCESSING...' : title.toUpperCase()}
+      </Text>
+    </TouchableOpacity>
   );
 };
 
 const LoginScreen = ({ navigation }: any) => {
-  const [email, setEmail] = useState('mluthfikhalil@gmail.com');
-  const [password, setPassword] = useState('123456');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signIn, isLocalAuth } = useAuth();
+  const [errorMessage, setErrorMessage] = useState('');
+  const { signIn } = useAuth();
 
   const handleLogin = useCallback(async () => {
+    setErrorMessage('');
     if (!email.trim() || !password) {
-      window.alert('Error: Please enter email and password');
+      setErrorMessage('Required fields missing');
       return;
     }
-
     setLoading(true);
     const { error } = await signIn(email.trim(), password);
     setLoading(false);
-
-    if (error) {
-      if (error.message.includes('Invalid') || error.message.includes('credentials')) {
-        window.alert('Login Failed ❌\n\nInvalid email or password.\n\nPlease check your credentials or create a new account.');
-      } else {
-        window.alert('Login Failed: ' + error.message);
-      }
-      return;
-    }
-
-    // Success! Show welcome message and redirect to profile
-    window.alert('Login Successful! 🎉\n\nWelcome back, rider!');
-    
-    // Navigate to Profile (use window location for web)
-    if (typeof window !== 'undefined') {
-      window.location.href = '/profile';
-    }
-  }, [email, password, signIn, navigation]);
+    if (error) setErrorMessage(error.message);
+  }, [email, password, signIn]);
 
   return (
-    <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.header}>
-          <Text style={styles.logo}>🏍️</Text>
-          <Text style={styles.title}>RiderHub</Text>
-          <Text style={styles.subtitle}>Welcome back, rider!</Text>
-          {isLocalAuth && <Text style={styles.badge}>📱 Local Account</Text>}
+    <SafeAreaView style={ts.container}>
+      <ScrollView contentContainerStyle={ts.scrollContent} showsVerticalScrollIndicator={false}>
+        <View style={ts.hero}>
+          <MaterialCommunityIcons name="lightning-bolt" size={48} color={colors.accent} />
+          <Text style={ts.brandTitle}>RIDERHUB</Text>
+          <Text style={ts.heroSubtitle}>AUTHENTICATION REQUIRED</Text>
         </View>
 
-        <View style={styles.form}>
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Email</Text>
+        <TeslaCard style={ts.formCard}>
+          <View style={ts.inputBox}>
+            <Text style={ts.inputLabel}>EMAIL ADDRESS</Text>
             <TextInput
-              style={styles.input}
-              placeholder="your@email.com"
-              placeholderTextColor={COLORS.textMuted}
+              style={ts.input}
+              placeholder="name@example.com"
+              placeholderTextColor={colors.textMuted}
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
-              submitBehavior="submit"
-              onSubmitEditing={handleLogin}
-              returnKeyType="done"
             />
           </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Password</Text>
+          <View style={ts.inputBox}>
+            <Text style={ts.inputLabel}>PASSWORD</Text>
             <TextInput
-              style={styles.input}
+              style={ts.input}
               placeholder="••••••••"
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={colors.textMuted}
               value={password}
               onChangeText={setPassword}
               secureTextEntry
-              submitBehavior="submit"
-              onSubmitEditing={handleLogin}
-              returnKeyType="done"
             />
           </View>
 
-          <Button
-            title={loading ? 'Logging in...' : 'Login'}
-            onPress={handleLogin}
-            disabled={loading}
-            style={styles.button}
-          />
-        </View>
+          {errorMessage ? <Text style={ts.errorText}>{errorMessage}</Text> : null}
 
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>Don't have an account? </Text>
-          <Link
-            title="Register"
-            onPress={() => navigation.navigate('Register')}
+          <CustomButton
+            title="Sign In"
+            onPress={handleLogin}
+            loading={loading}
+            style={ts.submitBtn}
           />
+
+          <TouchableOpacity style={ts.forgotBtn}>
+            <Text style={ts.forgotText}>FORGOT PASSWORD?</Text>
+          </TouchableOpacity>
+        </TeslaCard>
+
+        <View style={ts.footer}>
+          <Text style={ts.footerText}>New to the platform?</Text>
+          <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+            <Text style={ts.footerLink}>CREATE ACCOUNT</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 };
 
 const RegisterScreen = ({ navigation }: any) => {
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('mluthfikhalil@gmail.com');
-  const [password, setPassword] = useState('123456');
-  const [confirmPassword, setConfirmPassword] = useState('123456');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signUp, isLocalAuth } = useAuth();
+  const [errorMessage, setErrorMessage] = useState('');
+  const { signUp } = useAuth();
 
   const handleRegister = useCallback(async () => {
-    if (!name.trim() || !email.trim() || !password || !confirmPassword) {
-      window.alert('Error: Please fill in all fields');
+    setErrorMessage('');
+    if (!name.trim() || !email.trim() || !password) {
+      setErrorMessage('All fields required');
       return;
     }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email.trim())) {
-      window.alert('Error: Please enter a valid email address');
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      window.alert('Error: Passwords do not match');
-      return;
-    }
-
-    if (password.length < 4) {
-      window.alert('Error: Password must be at least 4 characters');
-      return;
-    }
-
     setLoading(true);
-    
-    const { error, needsVerification } = await signUp(email.trim(), password);
-    
-    if (error) {
-      setLoading(false);
-      if (error.message.includes('already registered')) {
-        window.alert('Account Exists ⚠️\n\nThis email is already registered.\n\nTry Login instead.');
-      } else {
-        window.alert('Registration Failed: ' + error.message);
-      }
-      return;
-    }
-    
+    const { error } = await signUp(email.trim(), password, name);
     setLoading(false);
-    
-    // Success! Show welcome message and redirect to profile
-    window.alert('Welcome to RiderHub! 🎉\n\nAccount created successfully!\n\nYour rider profile is ready. Lets ride! 🏍️');
-    
-    // Navigate to Profile (use window location for web)
-    if (typeof window !== 'undefined') {
-      window.location.href = '/profile';
-    }
-  }, [name, email, password, confirmPassword, signUp, navigation]);
+    if (error) setErrorMessage(error.message);
+  }, [name, email, password, signUp]);
 
   return (
-    <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.header}>
-          <Text style={styles.logo}>🏍️</Text>
-          <Text style={styles.title}>Join RiderHub</Text>
-          <Text style={styles.subtitle}>Create your rider account</Text>
-          {isLocalAuth && <Text style={styles.badge}>📱 Creating Local Account</Text>}
+    <SafeAreaView style={ts.container}>
+      <ScrollView contentContainerStyle={ts.scrollContent} showsVerticalScrollIndicator={false}>
+        <View style={ts.hero}>
+          <MaterialCommunityIcons name="account-plus-outline" size={48} color={colors.accent} />
+          <Text style={ts.brandTitle}>JOIN COLLECTIVE</Text>
+          <Text style={ts.heroSubtitle}>CREATE YOUR RIDER PROFILE</Text>
         </View>
 
-        <View style={styles.form}>
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Your Name</Text>
+        <TeslaCard style={ts.formCard}>
+          <View style={ts.inputBox}>
+            <Text style={ts.inputLabel}>FULL NAME</Text>
             <TextInput
-              style={styles.input}
-              placeholder="Your name"
-              placeholderTextColor={COLORS.textMuted}
+              style={ts.input}
+              placeholder="John Doe"
+              placeholderTextColor={colors.textMuted}
               value={name}
               onChangeText={setName}
-              autoCapitalize="words"
             />
           </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Email</Text>
+          <View style={ts.inputBox}>
+            <Text style={ts.inputLabel}>EMAIL ADDRESS</Text>
             <TextInput
-              style={styles.input}
-              placeholder="your@email.com"
-              placeholderTextColor={COLORS.textMuted}
+              style={ts.input}
+              placeholder="name@example.com"
+              placeholderTextColor={colors.textMuted}
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
               autoCapitalize="none"
-              autoCorrect={false}
             />
           </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Password</Text>
+          <View style={ts.inputBox}>
+            <Text style={ts.inputLabel}>PASSWORD</Text>
             <TextInput
-              style={styles.input}
+              style={ts.input}
               placeholder="••••••••"
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={colors.textMuted}
               value={password}
               onChangeText={setPassword}
               secureTextEntry
             />
           </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Confirm Password</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="••••••••"
-              placeholderTextColor={COLORS.textMuted}
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              secureTextEntry
-              submitBehavior="submit"
-              onSubmitEditing={handleRegister}
-              returnKeyType="done"
-            />
-          </View>
+          {errorMessage ? <Text style={ts.errorText}>{errorMessage}</Text> : null}
 
-          <Button
-            title={loading ? 'Creating account...' : 'Create Account'}
+          <CustomButton
+            title="Register"
             onPress={handleRegister}
-            disabled={loading}
-            style={styles.button}
-            secondary
+            loading={loading}
+            style={ts.submitBtn}
           />
-        </View>
+        </TeslaCard>
 
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>Already have an account? </Text>
-          <Link
-            title="Login"
-            onPress={() => navigation.navigate('Login')}
-          />
+        <View style={ts.footer}>
+          <Text style={ts.footerText}>Already have an account?</Text>
+          <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+            <Text style={ts.footerLink}>SIGN IN</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 };
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
-  scrollContent: { flexGrow: 1, padding: 24, justifyContent: 'center' },
-  header: { alignItems: 'center', marginBottom: 40 },
-  logo: { fontSize: 64, marginBottom: 16 },
-  title: { fontSize: 32, fontWeight: '800', color: COLORS.text, marginBottom: 8 },
-  subtitle: { fontSize: 16, color: COLORS.textSecondary },
-  badge: { 
-    marginTop: 12, 
-    fontSize: 12, 
-    color: COLORS.primary, 
-    backgroundColor: COLORS.surface,
-    padding: '6px 12px',
-    borderRadius: 20,
-  },
-  form: { width: '100%' },
-  inputGroup: { marginBottom: 20 },
-  label: { fontSize: 14, fontWeight: '600', color: COLORS.text, marginBottom: 8 },
+const ts = StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
+  scrollContent: { flexGrow: 1, padding: spacing.lg, justifyContent: 'center' },
+  hero: { alignItems: 'center', marginBottom: 48 },
+  brandTitle: { color: colors.text, fontSize: 32, fontWeight: '800', letterSpacing: 2, marginTop: 16 },
+  heroSubtitle: { color: colors.textMuted, fontSize: 10, fontWeight: '800', letterSpacing: 1, marginTop: 8 },
+  card: { backgroundColor: colors.surface, borderRadius: borderRadius.lg, padding: spacing.xl },
+  formCard: { width: '100%' },
+  inputBox: { marginBottom: 24 },
+  inputLabel: { color: colors.textMuted, fontSize: 9, fontWeight: '800', letterSpacing: 1, marginBottom: 12 },
   input: { 
-    backgroundColor: COLORS.surface, 
+    backgroundColor: '#000', 
     borderRadius: 12, 
     padding: 16, 
     fontSize: 16, 
-    color: COLORS.text 
+    color: colors.text,
+    borderWidth: 1,
+    borderColor: '#222'
   },
-  button: { marginTop: 10 },
-  footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 30, alignItems: 'center' },
-  footerText: { fontSize: 14, color: COLORS.textSecondary },
+  btnBase: { height: 56, borderRadius: 28, justifyContent: 'center', alignItems: 'center' },
+  btnPrimary: { backgroundColor: colors.accent },
+  btnOutline: { borderWidth: 1, borderColor: '#333' },
+  btnDisabled: { opacity: 0.3 },
+  btnText: { color: '#000', fontSize: 14, fontWeight: '800', letterSpacing: 1 },
+  btnTextOutline: { color: colors.text },
+  submitBtn: { marginTop: 16 },
+  forgotBtn: { alignSelf: 'center', marginTop: 24 },
+  forgotText: { color: colors.textMuted, fontSize: 11, fontWeight: '700' },
+  errorText: { color: colors.error, fontSize: 12, textAlign: 'center', marginBottom: 16, fontWeight: '600' },
+  footer: { marginTop: 40, alignItems: 'center', gap: 12 },
+  footerText: { color: colors.textSecondary, fontSize: 13 },
+  footerLink: { color: colors.accent, fontSize: 13, fontWeight: '800', letterSpacing: 0.5 },
 });
 
-export { LoginScreen, RegisterScreen };
+export { LoginScreen, RegisterScreen };

@@ -10,6 +10,7 @@ interface AuthContextType {
   signUp: (email: string, password: string, name?: string) => Promise<{ error: Error | null; needsVerification: boolean }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
+  isLocalAuth: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -81,23 +82,43 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signOut = async () => {
-    setLoading(true);
+    console.log('Initiating signOut...');
+    
     try {
-      await supabase.auth.signOut();
-      if (typeof window !== 'undefined') {
-        localStorage.clear();
-        sessionStorage.clear();
-        window.location.href = '/';
-      }
+      // 1. Tell Supabase to sign out (with local scope fallback if needed)
+      await supabase.auth.signOut({ scope: 'local' });
     } catch (e) {
-      console.error('SignOut error:', e);
+      console.warn('SignOut failed:', e);
     } finally {
-      setLoading(false);
+      // 2. Clear state manually NO MATTER WHAT
+      setUser(null);
+      setSession(null);
+      
+      // 3. Force storage cleanup
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.clear();
+          sessionStorage.clear();
+          // Remove specific Supabase keys just in case
+          Object.keys(localStorage).forEach(key => {
+            if (key.includes('supabase') || key.includes('sb-')) {
+              localStorage.removeItem(key);
+            }
+          });
+        } catch (err) {
+          console.error('Storage cleanup error:', err);
+        }
+      }
+      
+      console.log('SignOut completed locally.');
     }
   };
 
+  // Detect if we are in a local development environment or similar
+  const isLocalAuth = user?.email?.includes('local_') || false;
+
   return (
-    <AuthContext.Provider value={{ user, session, loading, signUp, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, session, loading, signUp, signIn, signOut, isLocalAuth }}>
       {children}
     </AuthContext.Provider>
   );

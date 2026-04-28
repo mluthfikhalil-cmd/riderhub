@@ -1,9 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Modal, TextInput, Alert, ActivityIndicator, Platform } from 'react-native';
-import { Card, Badge, SectionTitle, Button } from '../components';
-import { colors, spacing, fontSize, borderRadius } from '../theme';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
+import { colors, spacing, fontSize, borderRadius } from '../theme';
+
+const TeslaCard = ({ children, style, onPress }: any) => {
+  const W = onPress ? TouchableOpacity : View;
+  return (
+    <W style={[ts.card, style]} onPress={onPress} activeOpacity={0.85}>
+      {children}
+    </W>
+  );
+};
 
 interface Bike {
   id: string;
@@ -41,7 +50,6 @@ const GarageScreen = ({ navigation }: any) => {
 
       if (error) {
         if (error.code === 'PGRST116' || error.message.includes('not found')) {
-          // Table probably doesn't exist yet, show empty or mock
           setBikes([]);
         } else {
           throw error;
@@ -58,13 +66,13 @@ const GarageScreen = ({ navigation }: any) => {
 
   const handleAddBike = async () => {
     if (!user?.id) {
-      const msg = 'Kamu harus login untuk menambah motor!';
+      const msg = 'Please login to add a bike!';
       Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Error', msg);
       return;
     }
 
     if (!brand || !model || !plate) {
-      const msg = 'Harap isi semua kolom wajib!';
+      const msg = 'Please fill in all required fields!';
       Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Error', msg);
       return;
     }
@@ -81,27 +89,17 @@ const GarageScreen = ({ navigation }: any) => {
       };
 
       const { error } = await supabase.from('bikes').insert([newBike]);
-      
       if (error) throw error;
 
-      const successMsg = 'Motor berhasil ditambahkan ke garasi!';
-      Platform.OS === 'web' ? window.alert(successMsg) : Alert.alert('Sukses', successMsg);
-      
       setIsModalVisible(false);
       resetForm();
       fetchBikes();
     } catch (err: any) {
       console.error('Save error:', err.message);
-      const errorMsg = 'Gagal menyimpan. Pastikan tabel "bikes" sudah dibuat di Supabase SQL Editor.';
-      Platform.OS === 'web' ? window.alert(errorMsg) : Alert.alert('Info', errorMsg);
-      
-      // Fallback local preview
+      // Mock fallback for demo
       const mockBike: Bike = {
         id: Math.random().toString(),
-        brand,
-        model,
-        plate_number: plate,
-        year,
+        brand, model, plate_number: plate, year,
         is_primary: bikes.length === 0,
       };
       setBikes([...bikes, mockBike]);
@@ -121,127 +119,142 @@ const GarageScreen = ({ navigation }: any) => {
 
   const setPrimaryBike = async (id: string) => {
     try {
-      // 1. Reset all to false
       await supabase.from('bikes').update({ is_primary: false }).neq('id', id);
-      // 2. Set this one to true
       await supabase.from('bikes').update({ is_primary: true }).eq('id', id);
-      
       fetchBikes();
     } catch (err) {
-      // Local fallback
       setBikes(bikes.map(b => ({ ...b, is_primary: b.id === id })));
     }
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={styles.backIcon}>←</Text>
+    <SafeAreaView style={ts.container}>
+      <View style={ts.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={ts.iconBtn}>
+          <Ionicons name="chevron-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.title}>🏍️ My Garage</Text>
-        <TouchableOpacity onPress={() => setIsModalVisible(true)} style={styles.addButton}>
-          <Text style={styles.addIcon}>+</Text>
+        <View style={{ flex: 1, marginLeft: 16 }}>
+          <Text style={ts.headerTitle}>Garage</Text>
+          <Text style={ts.headerSubtitle}>Manage your vehicles</Text>
+        </View>
+        <TouchableOpacity onPress={() => setIsModalVisible(true)} style={ts.addBtn}>
+          <Ionicons name="add" size={24} color="#000" />
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        <SectionTitle title="Koleksi Motor Kamu" />
+      <ScrollView style={ts.scrollView} showsVerticalScrollIndicator={false} contentContainerStyle={ts.scrollPadding}>
+        <Text style={ts.sectionLabel}>YOUR COLLECTION</Text>
         
         {loading ? (
-          <ActivityIndicator color={colors.primary} style={{ marginTop: 40 }} />
+          <ActivityIndicator color={colors.accent} style={{ marginTop: 40 }} />
         ) : bikes.length === 0 ? (
-          <Card style={styles.emptyCard}>
-            <Text style={styles.emptyEmoji}>🏚️</Text>
-            <Text style={styles.emptyText}>Garasi kamu masih kosong.</Text>
-            <Button 
-              title="Tambah Motor Sekarang" 
-              onPress={() => setIsModalVisible(true)} 
-              variant="outline"
-              style={{ marginTop: 20 }}
-            />
-          </Card>
+          <TeslaCard style={ts.emptyCard}>
+            <MaterialCommunityIcons name="garage-variant" size={64} color={colors.textMuted} />
+            <Text style={ts.emptyText}>Your garage is empty.</Text>
+            <TouchableOpacity style={ts.emptyAction} onPress={() => setIsModalVisible(true)}>
+              <Text style={ts.emptyActionText}>Add Your First Bike</Text>
+            </TouchableOpacity>
+          </TeslaCard>
         ) : (
           bikes.map((bike) => (
-            <Card key={bike.id} style={[styles.bikeCard, bike.is_primary && styles.primaryCard]}>
-              <View style={styles.bikeHeader}>
-                <View style={styles.bikeIconContainer}>
-                  <Text style={styles.bikeEmoji}>🏍️</Text>
+            <TeslaCard key={bike.id} style={[ts.bikeCard, bike.is_primary && ts.primaryCard]}>
+              <View style={ts.bikeHeader}>
+                <View style={ts.bikeIconBox}>
+                  <MaterialCommunityIcons name="motorbike" size={32} color={bike.is_primary ? colors.accent : colors.textMuted} />
                 </View>
-                <View style={styles.bikeDetails}>
-                  <Text style={styles.bikeName}>{bike.brand} {bike.model}</Text>
-                  <Text style={styles.bikePlate}>{bike.plate_number}</Text>
-                  <Text style={styles.bikeYear}>{bike.year || 'Tahun tidak diisi'}</Text>
+                <View style={ts.bikeInfo}>
+                  <Text style={ts.bikeBrand}>{bike.brand}</Text>
+                  <Text style={ts.bikeModel}>{bike.model}</Text>
+                  <View style={ts.plateBox}>
+                    <Text style={ts.plateText}>{bike.plate_number}</Text>
+                  </View>
                 </View>
                 {bike.is_primary ? (
-                  <Badge label="Utama" variant="success" />
+                  <View style={ts.primaryBadge}>
+                    <Text style={ts.primaryBadgeText}>PRIMARY</Text>
+                  </View>
                 ) : (
-                  <TouchableOpacity onPress={() => setPrimaryBike(bike.id)}>
-                    <Text style={styles.setPrimaryText}>Set Utama</Text>
+                  <TouchableOpacity onPress={() => setPrimaryBike(bike.id)} style={ts.setPrimaryBtn}>
+                    <Text style={ts.setPrimaryText}>Set Default</Text>
                   </TouchableOpacity>
                 )}
               </View>
-            </Card>
+              <View style={ts.bikeStatsRow}>
+                <View style={ts.bikeStat}>
+                  <Text style={ts.statLabel}>YEAR</Text>
+                  <Text style={ts.statValue}>{bike.year || 'N/A'}</Text>
+                </View>
+                <View style={ts.bikeStat}>
+                  <Text style={ts.statLabel}>STATUS</Text>
+                  <Text style={[ts.statValue, { color: colors.success }]}>ACTIVE</Text>
+                </View>
+              </View>
+            </TeslaCard>
           ))
         )}
 
-        <View style={styles.infoBox}>
-          <Text style={styles.infoTitle}>💡 Tips RiderHub</Text>
-          <Text style={styles.infoText}>Gunakan motor "Utama" untuk perhitungan statistik perjalanan dan pengingat servis otomatis.</Text>
-        </View>
-
-        <View style={styles.bottomSpace} />
+        <TeslaCard style={ts.tipsCard}>
+          <Ionicons name="bulb-outline" size={24} color={colors.accent} style={{ marginBottom: 12 }} />
+          <Text style={ts.tipsTitle}>Pro Tip</Text>
+          <Text style={ts.tipsDesc}>Set your daily ride as "Primary" to automatically track mileage and service intervals.</Text>
+        </TeslaCard>
       </ScrollView>
 
       {/* Add Bike Modal */}
       <Modal visible={isModalVisible} animationType="slide" transparent={true}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Tambah Motor Baru</Text>
-            
-            <TextInput 
-              style={styles.input} 
-              placeholder="Brand (Contoh: Honda)" 
-              placeholderTextColor={colors.textMuted}
-              value={brand}
-              onChangeText={setBrand}
-            />
-            <TextInput 
-              style={styles.input} 
-              placeholder="Model (Contoh: CBR250RR)" 
-              placeholderTextColor={colors.textMuted}
-              value={model}
-              onChangeText={setModel}
-            />
-            <TextInput 
-              style={styles.input} 
-              placeholder="Nomor Plat (B 1234 XYZ)" 
-              placeholderTextColor={colors.textMuted}
-              value={plate}
-              onChangeText={setPlate}
-            />
-            <TextInput 
-              style={styles.input} 
-              placeholder="Tahun (Pilihan)" 
-              placeholderTextColor={colors.textMuted}
-              value={year}
-              onChangeText={setYear}
-              keyboardType="numeric"
-            />
-
-            <View style={styles.modalButtons}>
-              <TouchableOpacity 
-                style={styles.cancelBtn} 
-                onPress={() => { setIsModalVisible(false); resetForm(); }}
-              >
-                <Text style={styles.cancelBtnText}>Batal</Text>
+        <View style={ts.modalOverlay}>
+          <View style={ts.modalContent}>
+            <View style={ts.modalHeader}>
+              <Text style={ts.modalTitle}>Add Vehicle</Text>
+              <TouchableOpacity onPress={() => { setIsModalVisible(false); resetForm(); }}>
+                <Ionicons name="close" size={24} color={colors.text} />
               </TouchableOpacity>
+            </View>
+            
+            <View style={ts.form}>
+              <Text style={ts.inputLabel}>BRAND</Text>
+              <TextInput 
+                style={ts.input} 
+                placeholder="e.g. Honda, Yamaha, Kawasaki" 
+                placeholderTextColor={colors.textMuted}
+                value={brand}
+                onChangeText={setBrand}
+              />
+
+              <Text style={ts.inputLabel}>MODEL</Text>
+              <TextInput 
+                style={ts.input} 
+                placeholder="e.g. CBR250RR, R25, ZX25R" 
+                placeholderTextColor={colors.textMuted}
+                value={model}
+                onChangeText={setModel}
+              />
+
+              <Text style={ts.inputLabel}>PLATE NUMBER</Text>
+              <TextInput 
+                style={ts.input} 
+                placeholder="B 1234 XYZ" 
+                placeholderTextColor={colors.textMuted}
+                value={plate}
+                onChangeText={setPlate}
+              />
+
+              <Text style={ts.inputLabel}>YEAR (OPTIONAL)</Text>
+              <TextInput 
+                style={ts.input} 
+                placeholder="2024" 
+                placeholderTextColor={colors.textMuted}
+                value={year}
+                onChangeText={setYear}
+                keyboardType="numeric"
+              />
+
               <TouchableOpacity 
-                style={styles.saveBtn} 
+                style={ts.saveBtn} 
                 onPress={handleAddBike}
                 disabled={saving}
               >
-                {saving ? <ActivityIndicator size="small" color="#000" /> : <Text style={styles.saveBtnText}>Simpan</Text>}
+                {saving ? <ActivityIndicator size="small" color="#000" /> : <Text style={ts.saveBtnText}>ADD TO GARAGE</Text>}
               </TouchableOpacity>
             </View>
           </View>
@@ -251,182 +264,52 @@ const GarageScreen = ({ navigation }: any) => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: spacing.lg,
-    backgroundColor: colors.surface,
-  },
-  backButton: {
-    padding: spacing.sm,
-  },
-  backIcon: {
-    fontSize: 24,
-    color: colors.text,
-  },
-  title: {
-    fontSize: fontSize.xl,
-    fontWeight: '700',
-    color: colors.text,
-  },
-  addButton: {
-    backgroundColor: colors.primary,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  addIcon: {
-    fontSize: 24,
-    color: colors.background,
-    fontWeight: '700',
-  },
-  scrollView: {
-    flex: 1,
-    padding: spacing.md,
-  },
-  emptyCard: {
-    alignItems: 'center',
-    padding: spacing.xl,
-    marginTop: 40,
-  },
-  emptyEmoji: {
-    fontSize: 60,
-    marginBottom: spacing.md,
-  },
-  emptyText: {
-    color: colors.textSecondary,
-    fontSize: fontSize.md,
-  },
-  bikeCard: {
-    marginBottom: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  primaryCard: {
-    borderColor: colors.primary,
-    borderWidth: 2,
-  },
-  bikeHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  bikeIconContainer: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: colors.surfaceLight,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: spacing.md,
-  },
-  bikeEmoji: {
-    fontSize: 28,
-  },
-  bikeDetails: {
-    flex: 1,
-  },
-  bikeName: {
-    fontSize: fontSize.lg,
-    fontWeight: '700',
-    color: colors.text,
-  },
-  bikePlate: {
-    fontSize: fontSize.md,
-    color: colors.primary,
-    marginTop: 2,
-  },
-  bikeYear: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-    marginTop: 2,
-  },
-  setPrimaryText: {
-    color: colors.textSecondary,
-    fontSize: fontSize.sm,
-    fontWeight: '600',
-    textDecorationLine: 'underline',
-  },
-  infoBox: {
-    backgroundColor: colors.surfaceLight,
-    padding: spacing.md,
-    borderRadius: borderRadius.md,
-    marginTop: spacing.xl,
-  },
-  infoTitle: {
-    color: colors.primary,
-    fontWeight: '700',
-    marginBottom: spacing.xs,
-  },
-  infoText: {
-    color: colors.textSecondary,
-    fontSize: fontSize.sm,
-    lineHeight: 18,
-  },
-  bottomSpace: {
-    height: 100,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.8)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: spacing.md,
-  },
-  modalContent: {
-    width: '100%',
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.lg,
-    padding: spacing.lg,
-  },
-  modalTitle: {
-    fontSize: fontSize.xl,
-    fontWeight: '800',
-    color: colors.text,
-    marginBottom: spacing.lg,
-  },
-  input: {
-    backgroundColor: colors.surfaceLight,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    color: colors.text,
-    fontSize: fontSize.md,
-    marginBottom: spacing.md,
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    marginTop: spacing.md,
-  },
-  cancelBtn: {
-    flex: 1,
-    padding: spacing.md,
-    borderRadius: borderRadius.md,
-    backgroundColor: colors.surfaceLight,
-    alignItems: 'center',
-  },
-  cancelBtnText: {
-    color: colors.text,
-    fontWeight: '600',
-  },
-  saveBtn: {
-    flex: 2,
-    padding: spacing.md,
-    borderRadius: borderRadius.md,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-  },
-  saveBtnText: {
-    color: colors.background,
-    fontWeight: '700',
-  },
+const ts = StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
+  headerTitle: { color: colors.text, fontSize: fontSize.xl, fontWeight: '700' },
+  headerSubtitle: { color: colors.textSecondary, fontSize: fontSize.xs, marginTop: 2 },
+  iconBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#111', justifyContent: 'center', alignItems: 'center' },
+  addBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.accent, justifyContent: 'center', alignItems: 'center' },
+  scrollView: { flex: 1 },
+  scrollPadding: { padding: spacing.lg, paddingBottom: 100 },
+  sectionLabel: { color: colors.textMuted, fontSize: 10, fontWeight: '700', letterSpacing: 1, marginBottom: spacing.lg },
+  card: { backgroundColor: colors.surface, borderRadius: borderRadius.lg, padding: spacing.lg, marginBottom: spacing.lg },
+  emptyCard: { alignItems: 'center', paddingVertical: spacing.xxl, backgroundColor: '#111' },
+  emptyText: { color: colors.textSecondary, fontSize: fontSize.md, marginTop: spacing.lg, fontWeight: '600' },
+  emptyAction: { marginTop: spacing.xl, paddingHorizontal: spacing.xl, paddingVertical: spacing.md, borderRadius: borderRadius.md, borderWidth: 1, borderColor: colors.accent },
+  emptyActionText: { color: colors.accent, fontWeight: '700' },
+  bikeCard: { padding: spacing.lg, borderWidth: 1, borderColor: '#111' },
+  primaryCard: { borderColor: colors.accent, backgroundColor: '#0A0A0A' },
+  bikeHeader: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  bikeIconBox: { width: 56, height: 56, borderRadius: borderRadius.md, backgroundColor: '#111', justifyContent: 'center', alignItems: 'center' },
+  bikeInfo: { flex: 1 },
+  bikeBrand: { color: colors.textMuted, fontSize: 10, fontWeight: '700', letterSpacing: 1 },
+  bikeModel: { color: colors.text, fontSize: fontSize.lg, fontWeight: '700', marginTop: 2 },
+  plateBox: { marginTop: 6, paddingHorizontal: 8, paddingVertical: 2, backgroundColor: '#1C1C1E', alignSelf: 'flex-start', borderRadius: 4 },
+  plateText: { color: colors.accent, fontSize: 11, fontWeight: '800' },
+  primaryBadge: { backgroundColor: 'rgba(0,214,125,0.1)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4 },
+  primaryBadgeText: { color: colors.accent, fontSize: 8, fontWeight: '800' },
+  setPrimaryBtn: { padding: 8 },
+  setPrimaryText: { color: colors.textSecondary, fontSize: 10, fontWeight: '600' },
+  bikeStatsRow: { flexDirection: 'row', marginTop: spacing.lg, paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: '#1C1C1E' },
+  bikeStat: { flex: 1 },
+  statLabel: { color: colors.textMuted, fontSize: 8, fontWeight: '700' },
+  statValue: { color: colors.text, fontSize: fontSize.sm, fontWeight: '600', marginTop: 2 },
+  tipsCard: { backgroundColor: '#111', marginTop: spacing.xl },
+  tipsTitle: { color: colors.text, fontSize: fontSize.md, fontWeight: '700', marginBottom: 4 },
+  tipsDesc: { color: colors.textSecondary, fontSize: fontSize.sm, lineHeight: 20 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'flex-end' },
+  modalContent: { backgroundColor: colors.surface, borderTopLeftRadius: borderRadius.xl, borderTopRightRadius: borderRadius.xl, padding: spacing.xl },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xl },
+  modalTitle: { color: colors.text, fontSize: fontSize.xl, fontWeight: '700' },
+  form: { gap: spacing.lg },
+  inputLabel: { color: colors.textMuted, fontSize: 10, fontWeight: '700', letterSpacing: 1 },
+  input: { backgroundColor: '#111', borderRadius: borderRadius.md, padding: spacing.lg, color: colors.text, fontSize: fontSize.md },
+  saveBtn: { backgroundColor: colors.accent, padding: spacing.lg, borderRadius: borderRadius.md, alignItems: 'center', marginTop: spacing.md },
+  saveBtnText: { color: '#000', fontWeight: '800', letterSpacing: 1 }
 });
+
+export default GarageScreen;
 
 export default GarageScreen;

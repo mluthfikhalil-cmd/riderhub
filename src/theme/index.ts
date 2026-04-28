@@ -1,37 +1,38 @@
-// RiderHub Theme - Dark Mode
-// Based on design specs from project handover
+// RiderHub Theme — Tesla Minimalist Edition
+// Inspired by Tesla App aesthetic
 
 export const colors = {
-  // Background colors
-  background: '#0F1217',
-  surface: '#1A1F26',
-  surfaceLight: '#2A313C',
-  
-  // Primary accent (Teal/Mint)
-  primary: '#00D094',
-  primaryDark: '#00A074',
-  primaryLight: '#33D9A9',
-  
-  // Secondary accent (Red/Coral)
-  secondary: '#FF6B6B',
-  secondaryDark: '#E55A5A',
-  secondaryLight: '#FF8888',
-  
-  // Text colors
+  // Backgrounds — Deep OLED black
+  background: '#000000',
+  surface: '#111111',
+  surfaceLight: '#1C1C1E',
+
+  // Primary — White / Light Gray
+  primary: '#FFFFFF',
+  primaryDark: '#A0A0A0',
+  primaryLight: '#F2F2F2',
+
+  // Accent — Neon Green (Charging/Eco)
+  accent: '#00D67D',
+  secondary: '#00D67D',
+  secondaryDark: '#00A862',
+  secondaryLight: '#4DFFB5',
+
+  // Text
   text: '#FFFFFF',
-  textSecondary: '#A0AEC0',
-  textMuted: '#718096',
-  
-  // Status colors
-  success: '#00D094',
-  warning: '#FFB800',
-  error: '#FF5252',
-  info: '#4299E1',
-  
-  // Other
-  border: '#2D3748',
-  divider: '#2D3748',
-  overlay: 'rgba(0, 0, 0, 0.8)',
+  textSecondary: '#8E8E93',
+  textMuted: '#48484A',
+
+  // Status
+  success: '#00D67D',
+  warning: '#FFD60A',
+  error: '#FF453A',
+  info: '#0A84FF',
+
+  // UI
+  border: '#2C2C2E',
+  divider: '#1C1C1E',
+  overlay: 'rgba(0,0,0,0.9)',
 };
 
 export const spacing = {
@@ -44,26 +45,21 @@ export const spacing = {
 };
 
 export const fontSize = {
-  xs: 10,
-  sm: 12,
-  md: 14,
-  lg: 16,
-  xl: 18,
-  xxl: 24,
-  xxxl: 32,
+  xs: 11,
+  sm: 13,
+  md: 15,
+  lg: 17,
+  xl: 20,
+  xxl: 28,
+  xxxl: 36,
 };
 
 export const borderRadius = {
-  sm: 8,
-  md: 12,
-  lg: 16,
-  xl: 24,
+  sm: 4,
+  md: 8,
+  lg: 14,
+  xl: 20,
   full: 9999,
 };
 
-export default {
-  colors,
-  spacing,
-  fontSize,
-  borderRadius,
-};
+export default { colors, spacing, fontSize, borderRadius };

@@ -9,6 +9,7 @@ import EventsScreen from '../screens/EventsScreen';
 import PartsScreen from '../screens/PartsScreen';
 import CommunityScreen from '../screens/CommunityScreen';
 import ProfileScreen from '../screens/ProfileScreen';
+import RideHistoryScreen from '../screens/RideHistoryScreen';
 
 import { colors, fontSize } from '../theme';
 
@@ -18,6 +19,7 @@ export type RootTabParamList = {
   Parts: undefined;
   Community: undefined;
   Profile: undefined;
+  RideHistory: undefined;
 };
 
 const Tab = createBottomTabNavigator<RootTabParamList>();
@@ -29,6 +31,7 @@ const screens = [
   { name: 'Parts', component: PartsScreen, icon: '🛒', label: 'Parts' },
   { name: 'Community', component: CommunityScreen, icon: '👥', label: 'Komunitas' },
   { name: 'Profile', component: ProfileScreen, icon: '👤', label: 'Profil' },
+  { name: 'RideHistory', component: RideHistoryScreen, icon: '🗺️', label: 'Rides' },
 ];
 
 // Tab Icon Component

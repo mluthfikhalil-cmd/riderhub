@@ -1,0 +1,43 @@
+// Hero slides data for the carousel
+export const heroSlides = [
+  {
+    id: 1,
+    tag: 'UNDERGROUND NETWORK',
+    title: 'KUASAI\nJALANAN',
+    accent: 'JALANAN',
+    sub: 'Platform all-in-one untuk riders Indonesia. Garage, komunitas, event, spareparts.',
+    badge: '🏁 #1 RIDER PLATFORM',
+    stat: '45K+ RIDERS ONLINE',
+    color: '#00D67D',
+  },
+  {
+    id: 2,
+    tag: 'CREW SYSTEM',
+    title: 'BUILD\nYOUR CREW',
+    accent: 'CREW',
+    sub: 'Bergabung dengan ribuan komunitas rider. Touring, kopdar, dan konvoi bersama.',
+    badge: '👥 120+ KOMUNITAS AKTIF',
+    stat: '50K+ ANGGOTA BERGABUNG',
+    color: '#00D67D',
+  },
+  {
+    id: 3,
+    tag: 'RACE EVENTS',
+    title: 'JOIN THE\nRACE',
+    accent: 'RACE',
+    sub: 'Temukan event touring, track day, dan rally di seluruh Indonesia setiap minggu.',
+    badge: '🏁 89 EVENT TERSEDIA',
+    stat: 'NEXT RACE: 15 MEI 2026',
+    color: '#00D67D',
+  },
+  {
+    id: 4,
+    tag: 'MARKETPLACE',
+    title: 'TUNE YOUR\nRIDE',
+    accent: 'RIDE',
+    sub: 'Marketplace spareparts motor terpercaya. Harga terbaik langsung dari seller.',
+    badge: '🔧 500+ PRODUK TERSEDIA',
+    stat: 'DELIVERY: 1-3 HARI',
+    color: '#00D67D',
+  },
+];

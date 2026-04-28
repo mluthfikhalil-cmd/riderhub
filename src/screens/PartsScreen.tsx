@@ -1,403 +1,269 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView } from 'react-native';
-import { Card, Badge, SectionTitle } from '../components';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, TextInput, Modal, Platform, Image, Linking, Dimensions } from 'react-native';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
+import { supabase } from '../lib/supabase';
 
-const PartsScreen = () => {
-  const categoryPills = ['Semua', 'Filter', 'Oli', 'Kampas', 'Busi', 'Ban', 'Aksesoris'];
-  const [activeCategory, setActiveCategory] = React.useState('Semua');
+const { width } = Dimensions.get('window');
+const categoryPills = ['Semua', 'Oli', 'Filter', 'Kampas', 'Busi', 'Ban', 'Aksesoris'];
 
-  const parts = [
-    {
-      id: 1,
-      name: 'Oli Motor壳牌 Shell Advance AX7',
-      category: 'Oli',
-      price: 'Rp 85.000',
-      originalPrice: 'Rp 120.000',
-      location: 'Jakarta Selatan',
-      seller: 'OTOMOTIF88',
-      rating: 4.9,
-      sold: 234,
-      image: '🛢️',
-      badge: 'Terjual',
-    },
-    {
-      id: 2,
-      name: 'Filter Udara Honda CBR150R Original',
-      category: 'Filter',
-      price: 'Rp 65.000',
-      originalPrice: 'Rp 90.000',
-      location: 'Bandung',
-      seller: 'PartMotorPrime',
-      rating: 4.8,
-      sold: 156,
-      image: '💨',
-      badge: 'Hot',
-    },
-    {
-      id: 3,
-      name: 'Kampas Rem Yamaha NMAX Original',
-      category: 'Kampas',
-      price: 'Rp 120.000',
-      originalPrice: null,
-      location: 'Surabaya',
-      seller: 'BengkelMaju',
-      rating: 4.7,
-      sold: 89,
-      image: '🛞',
-      badge: null,
-    },
-    {
-      id: 4,
-      name: 'Busi NGK Iridium IRUK7D',
-      category: 'Busi',
-      price: 'Rp 45.000',
-      originalPrice: 'Rp 65.000',
-      location: 'Jakarta Barat',
-      seller: 'SparepartsOnline',
-      rating: 5.0,
-      sold: 412,
-      image: '⚡',
-      badge: 'Best Seller',
-    },
-    {
-      id: 5,
-      name: 'Ban Michelin Pilot Street 140/70-17',
-      category: 'Ban',
-      price: 'Rp 450.000',
-      originalPrice: 'Rp 520.000',
-      location: 'Bekasi',
-      seller: 'VulkanisirMaju',
-      rating: 4.6,
-      sold: 67,
-      image: '🏍️',
-      badge: 'Diskon',
-    },
-    {
-      id: 6,
-      name: 'Aksesoris Tank Pad CBR150R Carbon',
-      category: 'Aksesoris',
-      price: 'Rp 180.000',
-      originalPrice: null,
-      location: 'Tangerang',
-      seller: 'ModifStyle',
-      rating: 4.9,
-      sold: 45,
-      image: '🎨',
-      badge: 'New',
-    },
-  ];
+const TeslaCard = ({ children, style, onPress }: any) => {
+  const W = onPress ? TouchableOpacity : View;
+  return (
+    <W style={[ts.card, style]} onPress={onPress} activeOpacity={0.85}>
+      {children}
+    </W>
+  );
+};
+
+const PartsScreen = ({ navigation }: any) => {
+  const [activeCategory, setActiveCategory] = useState('Semua');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedPart, setSelectedPart] = useState<any>(null);
+  const [dbParts, setDbParts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [cartIds, setCartIds] = useState<number[]>([]);
+
+  useEffect(() => {
+    fetchParts();
+    loadCart();
+  }, []);
+
+  const loadCart = () => {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const saved = localStorage.getItem('riderhub_cart_items');
+        if (saved) setCartIds(JSON.parse(saved));
+      }
+    } catch (_) {}
+  };
+
+  const fetchParts = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase.from('parts').select('*').order('created_at', { ascending: false });
+      if (error) throw error;
+      if (data) setDbParts(data);
+    } catch (err) {
+      console.error('Fetch error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCart = (id: number) => {
+    const newCart = cartIds.includes(id) ? cartIds.filter(i => i !== id) : [...cartIds, id];
+    setCartIds(newCart);
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        localStorage.setItem('riderhub_cart_items', JSON.stringify(newCart));
+      }
+    } catch (_) {}
+  };
+
+  const handleBuy = (part: any) => {
+    const url = part.affiliate_url || part.link || `https://wa.me/6281234567890?text=Halo, saya tertarik dengan ${part.title}`;
+    if (Platform.OS === 'web') window.open(url, '_blank');
+    else Linking.openURL(url);
+  };
+
+  const filteredParts = dbParts.filter(p => {
+    const matchCat = activeCategory === 'Semua' || p.category === activeCategory;
+    const matchSearch = (p.title || '').toLowerCase().includes(searchQuery.toLowerCase());
+    return matchCat && matchSearch;
+  });
+
+  const formatPrice = (p: any) => `Rp ${Number(p || 0).toLocaleString('id-ID')}`;
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.title}>🛒 Spareparts</Text>
-          <Text style={styles.subtitle}>Marketplace spareparts motor</Text>
+    <SafeAreaView style={ts.container}>
+      <View style={ts.header}>
+        <View style={ts.headerTop}>
+          <View>
+            <Text style={ts.title}>Marketplace</Text>
+            <Text style={ts.subtitle}>Premium Parts & Accessories</Text>
+          </View>
+          <TouchableOpacity style={ts.cartBtn} onPress={() => navigation.navigate('Cart')}>
+            <Ionicons name="cart-outline" size={24} color={colors.text} />
+            {cartIds.length > 0 && <View style={ts.cartDot} />}
+          </TouchableOpacity>
         </View>
 
-        {/* Search Bar */}
-        <View style={styles.searchContainer}>
-          <Text style={styles.searchIcon}>🔍</Text>
-          <Text style={styles.searchPlaceholder}>Cari spareparts...</Text>
-          <Text style={styles.filterIcon}>⚙️</Text>
+        <View style={ts.searchBox}>
+          <Ionicons name="search" size={18} color={colors.textMuted} style={ts.searchIcon} />
+          <TextInput
+            style={ts.searchInput}
+            placeholder="Search parts, brands, or shops"
+            placeholderTextColor={colors.textMuted}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
         </View>
 
-        {/* Category Pills */}
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false}
-          style={styles.categoryScroll}
-        >
-          {categoryPills.map((pill) => (
-            <TouchableOpacity
-              key={pill}
-              style={[
-                styles.categoryPill,
-                activeCategory === pill && styles.categoryPillActive,
-              ]}
-              onPress={() => setActiveCategory(pill)}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={ts.categoryContent}>
+          {categoryPills.map(cat => (
+            <TouchableOpacity 
+              key={cat} 
+              style={[ts.catPill, activeCategory === cat && ts.catPillActive]}
+              onPress={() => setActiveCategory(cat)}
             >
-              <Text style={[
-                styles.categoryText,
-                activeCategory === pill && styles.categoryTextActive,
-              ]}>
-                {pill}
-              </Text>
+              <Text style={[ts.catText, activeCategory === cat && ts.catTextActive]}>{cat}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
+      </View>
 
-        {/* Featured Banner */}
-        <View style={styles.bannerContainer}>
-          <View style={styles.banner}>
-            <View style={styles.bannerContent}>
-              <Text style={styles.bannerEmoji}>🎁</Text>
-              <View style={styles.bannerText}>
-                <Text style={styles.bannerTitle}>Diskon 20%</Text>
-                <Text style={styles.bannerSubtitle}>Semua oli motor premium</Text>
-              </View>
-            </View>
-            <TouchableOpacity style={styles.bannerButton}>
-              <Text style={styles.bannerButtonText}>Belanja</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Parts Grid */}
-        <SectionTitle title="📦 Produk" action="Terbaru" />
-        <View style={styles.partsGrid}>
-          {parts.map((part) => (
-            <TouchableOpacity key={part.id} style={styles.partCard}>
-              <View style={styles.partImageContainer}>
-                <Text style={styles.partEmoji}>{part.image}</Text>
-                {part.badge && (
-                  <View style={[
-                    styles.partBadge,
-                    part.badge === 'Hot' && styles.badgeHot,
-                    part.badge === 'Best Seller' && styles.badgeBestSeller,
-                    part.badge === 'New' && styles.badgeNew,
-                    part.badge === 'Diskon' && styles.badgeDiskon,
-                    part.badge === 'Terjual' && styles.badgeTerjual,
-                  ]}>
-                    <Text style={styles.partBadgeText}>{part.badge}</Text>
-                  </View>
-                )}
-              </View>
-              <View style={styles.partInfo}>
-                <Text style={styles.partName} numberOfLines={2}>{part.name}</Text>
-                <Text style={styles.partPrice}>{part.price}</Text>
-                {part.originalPrice && (
-                  <Text style={styles.partOriginalPrice}>{part.originalPrice}</Text>
-                )}
-                <View style={styles.partMeta}>
-                  <Text style={styles.partLocation}>📍 {part.location}</Text>
-                  <View style={styles.partRating}>
-                    <Text style={styles.ratingStar}>⭐</Text>
-                    <Text style={styles.ratingText}>{part.rating}</Text>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={ts.scrollPadding}>
+        {loading ? (
+          <View style={ts.loadingBox}><Text style={ts.loadingText}>Fetching data...</Text></View>
+        ) : filteredParts.length === 0 ? (
+          <View style={ts.emptyBox}><Text style={ts.emptyText}>No items found</Text></View>
+        ) : (
+          <View style={ts.grid}>
+            {filteredParts.map(part => (
+              <TeslaCard key={part.id} style={ts.partCard} onPress={() => setSelectedPart(part)}>
+                <View style={ts.imageBox}>
+                  {part.image_url ? (
+                    <Image source={{ uri: part.image_url }} style={ts.image} resizeMode="cover" />
+                  ) : (
+                    <Text style={ts.emoji}>{part.image_emoji || '📦'}</Text>
+                  )}
+                  {part.badge && (
+                    <View style={ts.badge}>
+                      <Text style={ts.badgeText}>{part.badge.toUpperCase()}</Text>
+                    </View>
+                  )}
+                </View>
+                <View style={ts.cardInfo}>
+                  <Text style={ts.partTitle} numberOfLines={2}>{part.title}</Text>
+                  <Text style={ts.partPrice}>{formatPrice(part.price)}</Text>
+                  <View style={ts.cardFooter}>
+                    <View style={ts.ratingRow}>
+                      <Ionicons name="star" size={10} color={colors.accent} />
+                      <Text style={ts.ratingVal}>{part.rating || '4.8'}</Text>
+                    </View>
+                    <Text style={ts.soldText}>{part.sold || '10+'} Sold</Text>
                   </View>
                 </View>
-                <Text style={styles.partSold}>Terjual {part.sold}</Text>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {/* Bottom spacing */}
-        <View style={styles.bottomSpace} />
+              </TeslaCard>
+            ))}
+          </View>
+        )}
       </ScrollView>
+
+      {/* Detail Modal */}
+      <Modal visible={selectedPart !== null} transparent animationType="slide">
+        <View style={ts.modalOverlay}>
+          <View style={ts.modalContent}>
+            <View style={ts.modalHeader}>
+              <TouchableOpacity onPress={() => setSelectedPart(null)} style={ts.modalClose}>
+                <Ionicons name="close" size={24} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+            {selectedPart && (
+              <ScrollView showsVerticalScrollIndicator={false}>
+                <View style={ts.modalImageBox}>
+                  {selectedPart.image_url ? (
+                    <Image source={{ uri: selectedPart.image_url }} style={ts.modalImage} resizeMode="contain" />
+                  ) : (
+                    <Text style={ts.modalEmoji}>{selectedPart.image_emoji || '📦'}</Text>
+                  )}
+                </View>
+                <Text style={ts.modalTag}>{selectedPart.category?.toUpperCase()}</Text>
+                <Text style={ts.modalTitle}>{selectedPart.title}</Text>
+                <Text style={ts.modalPrice}>{formatPrice(selectedPart.price)}</Text>
+                <View style={ts.modalDivider} />
+                <Text style={ts.sectionTitle}>Description</Text>
+                <Text style={ts.modalDesc}>{selectedPart.description}</Text>
+                
+                <View style={ts.sellerRow}>
+                  <View style={ts.sellerIcon}>
+                    <Ionicons name="storefront" size={20} color={colors.accent} />
+                  </View>
+                  <View>
+                    <Text style={ts.sellerName}>{selectedPart.seller_name || 'RiderHub Official'}</Text>
+                    <Text style={ts.sellerLoc}>{selectedPart.location || 'Jakarta, Indonesia'}</Text>
+                  </View>
+                </View>
+
+                <View style={ts.modalActions}>
+                  <TouchableOpacity 
+                    style={[ts.cartAction, cartIds.includes(selectedPart.id) && ts.cartActionActive]} 
+                    onPress={() => handleCart(selectedPart.id)}
+                  >
+                    <Ionicons name={cartIds.includes(selectedPart.id) ? "checkmark" : "cart"} size={20} color={cartIds.includes(selectedPart.id) ? "#000" : colors.text} />
+                  </TouchableOpacity>
+                  <TouchableOpacity style={ts.buyBtn} onPress={() => handleBuy(selectedPart)}>
+                    <Text style={ts.buyBtnText}>BUY NOW</Text>
+                  </TouchableOpacity>
+                </View>
+              </ScrollView>
+            )}
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  scrollView: {
-    flex: 1,
-    paddingHorizontal: spacing.md,
-  },
-  header: {
-    paddingVertical: spacing.lg,
-  },
-  title: {
-    fontSize: fontSize.xxl,
-    fontWeight: '700',
-    color: colors.text,
-  },
-  subtitle: {
-    fontSize: fontSize.md,
-    color: colors.textSecondary,
-    marginTop: spacing.xs,
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    marginBottom: spacing.md,
-  },
-  searchIcon: {
-    fontSize: 20,
-    marginRight: spacing.sm,
-  },
-  searchPlaceholder: {
-    flex: 1,
-    fontSize: fontSize.md,
-    color: colors.textMuted,
-  },
-  filterIcon: {
-    fontSize: 20,
-  },
-  categoryScroll: {
-    marginLeft: -spacing.md,
-    marginRight: -spacing.md,
-    paddingLeft: spacing.md,
-    marginBottom: spacing.lg,
-  },
-  categoryPill: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.full,
-    marginRight: spacing.sm,
-  },
-  categoryPillActive: {
-    backgroundColor: colors.primary,
-  },
-  categoryText: {
-    fontSize: fontSize.md,
-    color: colors.textSecondary,
-    fontWeight: '500',
-  },
-  categoryTextActive: {
-    color: colors.background,
-  },
-  bannerContainer: {
-    marginBottom: spacing.lg,
-  },
-  banner: {
-    backgroundColor: colors.surfaceLight,
-    borderRadius: borderRadius.lg,
-    padding: spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  bannerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  bannerEmoji: {
-    fontSize: 40,
-    marginRight: spacing.md,
-  },
-  bannerText: {},
-  bannerTitle: {
-    fontSize: fontSize.lg,
-    fontWeight: '700',
-    color: colors.secondary,
-  },
-  bannerSubtitle: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-  },
-  bannerButton: {
-    backgroundColor: colors.secondary,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.md,
-  },
-  bannerButtonText: {
-    fontSize: fontSize.md,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  partsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  partCard: {
-    width: '48%',
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    marginBottom: spacing.md,
-    overflow: 'hidden',
-  },
-  partImageContainer: {
-    height: 100,
-    backgroundColor: colors.surfaceLight,
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-  },
-  partEmoji: {
-    fontSize: 48,
-  },
-  partBadge: {
-    position: 'absolute',
-    top: spacing.xs,
-    left: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-    borderRadius: borderRadius.sm,
-    backgroundColor: colors.primary,
-  },
-  badgeHot: {
-    backgroundColor: '#FF4444',
-  },
-  badgeBestSeller: {
-    backgroundColor: colors.secondary,
-  },
-  badgeNew: {
-    backgroundColor: colors.info,
-  },
-  badgeDiskon: {
-    backgroundColor: colors.success,
-  },
-  badgeTerjual: {
-    backgroundColor: colors.textMuted,
-  },
-  partBadgeText: {
-    fontSize: fontSize.xs,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  partInfo: {
-    padding: spacing.sm,
-  },
-  partName: {
-    fontSize: fontSize.sm,
-    color: colors.text,
-    marginBottom: spacing.xs,
-    height: 32,
-  },
-  partPrice: {
-    fontSize: fontSize.md,
-    fontWeight: '700',
-    color: colors.primary,
-  },
-  partOriginalPrice: {
-    fontSize: fontSize.xs,
-    color: colors.textMuted,
-    textDecorationLine: 'line-through',
-  },
-  partMeta: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: spacing.xs,
-  },
-  partLocation: {
-    fontSize: fontSize.xs,
-    color: colors.textSecondary,
-  },
-  partRating: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  ratingStar: {
-    fontSize: 10,
-    marginRight: 2,
-  },
-  ratingText: {
-    fontSize: fontSize.xs,
-    color: colors.textSecondary,
-  },
-  partSold: {
-    fontSize: fontSize.xs,
-    color: colors.textMuted,
-    marginTop: spacing.xs,
-  },
-  bottomSpace: {
-    height: 100,
-  },
+const ts = StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
+  header: { backgroundColor: '#000', paddingBottom: spacing.md },
+  headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: spacing.lg },
+  title: { color: colors.text, fontSize: 24, fontWeight: '700' },
+  subtitle: { color: colors.textSecondary, fontSize: 10, fontWeight: '800', letterSpacing: 1, marginTop: 4 },
+  cartBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#111', justifyContent: 'center', alignItems: 'center' },
+  cartDot: { position: 'absolute', top: 10, right: 10, width: 8, height: 8, borderRadius: 4, backgroundColor: colors.accent, borderWidth: 2, borderColor: '#111' },
+  searchBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#111', marginHorizontal: spacing.lg, paddingHorizontal: 16, height: 48, borderRadius: 24, marginBottom: spacing.lg },
+  searchIcon: { marginRight: 12 },
+  searchInput: { flex: 1, color: colors.text, fontSize: 14 },
+  categoryContent: { paddingHorizontal: spacing.lg, gap: 12 },
+  catPill: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: '#111', borderWidth: 1, borderColor: '#222' },
+  catPillActive: { borderColor: colors.accent, backgroundColor: 'rgba(0, 214, 125, 0.05)' },
+  catText: { color: colors.textSecondary, fontSize: 13, fontWeight: '600' },
+  catTextActive: { color: colors.accent },
+  scrollPadding: { padding: spacing.lg, paddingBottom: 100 },
+  loadingBox: { marginTop: 100, alignItems: 'center' },
+  loadingText: { color: colors.textSecondary },
+  emptyBox: { marginTop: 100, alignItems: 'center' },
+  emptyText: { color: colors.textSecondary },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  partCard: { width: (width - 48 - 12) / 2, padding: 0, overflow: 'hidden', backgroundColor: '#0A0A0A', borderWidth: 1, borderColor: '#111' },
+  imageBox: { height: 140, backgroundColor: '#000', justifyContent: 'center', alignItems: 'center' },
+  image: { width: '100%', height: '100%' },
+  emoji: { fontSize: 40 },
+  badge: { position: 'absolute', top: 8, left: 8, backgroundColor: colors.accent, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
+  badgeText: { color: '#000', fontSize: 8, fontWeight: '900' },
+  cardInfo: { padding: 12 },
+  partTitle: { color: colors.text, fontSize: 13, fontWeight: '600', height: 36, lineHeight: 18 },
+  partPrice: { color: colors.text, fontSize: 15, fontWeight: '800', marginTop: 8 },
+  cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 },
+  ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  ratingVal: { color: colors.textSecondary, fontSize: 10, fontWeight: '700' },
+  soldText: { color: colors.textMuted, fontSize: 10, fontWeight: '600' },
+  card: { backgroundColor: colors.surface, borderRadius: borderRadius.lg, padding: spacing.md },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.95)', justifyContent: 'flex-end' },
+  modalContent: { backgroundColor: '#000', borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: spacing.xl, height: '90%' },
+  modalHeader: { flexDirection: 'row', justifyContent: 'flex-end', marginBottom: spacing.md },
+  modalClose: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#111', justifyContent: 'center', alignItems: 'center' },
+  modalImageBox: { width: '100%', height: 280, backgroundColor: '#000', justifyContent: 'center', alignItems: 'center', marginBottom: spacing.xl },
+  modalImage: { width: '100%', height: '100%' },
+  modalEmoji: { fontSize: 80 },
+  modalTag: { color: colors.accent, fontSize: 10, fontWeight: '800', letterSpacing: 2, marginBottom: 8 },
+  modalTitle: { color: colors.text, fontSize: 24, fontWeight: '700', marginBottom: 8 },
+  modalPrice: { color: colors.text, fontSize: 22, fontWeight: '800', marginBottom: spacing.xl },
+  modalDivider: { height: 1, backgroundColor: '#111', marginBottom: spacing.xl },
+  sectionTitle: { color: colors.textSecondary, fontSize: 12, fontWeight: '800', textTransform: 'uppercase', marginBottom: 12, letterSpacing: 1 },
+  modalDesc: { color: colors.textSecondary, fontSize: 15, lineHeight: 24, marginBottom: spacing.xl },
+  sellerRow: { flexDirection: 'row', alignItems: 'center', gap: 16, backgroundColor: '#111', padding: 16, borderRadius: 16, marginBottom: 40 },
+  sellerIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#000', justifyContent: 'center', alignItems: 'center' },
+  sellerName: { color: colors.text, fontSize: 15, fontWeight: '700' },
+  sellerLoc: { color: colors.textSecondary, fontSize: 12, marginTop: 2 },
+  modalActions: { flexDirection: 'row', gap: 12, marginBottom: 40 },
+  cartAction: { width: 60, height: 60, borderRadius: 30, backgroundColor: '#111', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#222' },
+  cartActionActive: { backgroundColor: colors.accent, borderColor: colors.accent },
+  buyBtn: { flex: 1, height: 60, borderRadius: 30, backgroundColor: colors.text, justifyContent: 'center', alignItems: 'center' },
+  buyBtnText: { color: colors.background, fontSize: 15, fontWeight: '800', letterSpacing: 1 }
 });
 
 export default PartsScreen;

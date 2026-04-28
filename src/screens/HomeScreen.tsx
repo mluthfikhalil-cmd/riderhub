@@ -1,329 +1,279 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Alert } from 'react-native';
-import { Card, Badge, SectionTitle } from '../components';
-import { colors, spacing, fontSize, borderRadius } from '../theme';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, RefreshControl, Platform, Image, Dimensions } from 'react-native';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
+import { supabase } from '../lib/supabase';
+import { colors, spacing, fontSize, borderRadius } from '../theme';
 
-const HomeScreen = ({ navigation }: any) => {
-  const { user } = useAuth();
-  const displayName = user?.user_metadata?.name || user?.email?.split('@')[0] || 'Rider';
-  const displayMotor = user?.user_metadata?.motor || 'Honda CBR150R';
+const { width } = Dimensions.get('window');
 
-  // Mock data
-  const nearbyEvents = [
-    { id: 1, title: 'Honda Big Ride 2026', location: 'Jakarta', date: '15 Mei 2026', participants: 234 },
-    { id: 2, title: 'Yamaha Sunday Ride', location: 'Bandung', date: '20 Mei 2026', participants: 89 },
-    { id: 3, title: 'Kawasaki Track Day', location: 'Sentul', date: '25 Mei 2026', participants: 156 },
-  ];
-
-  const quickStats = [
-    { label: 'Total Rides', value: '127', unit: 'kali' },
-    { label: 'Distance', value: '3,420', unit: 'km' },
-    { label: 'Fuel Used', value: '186', unit: 'liter' },
-  ];
-
+const TeslaCard = ({ children, style, onPress }: any) => {
+  const W = onPress ? TouchableOpacity : View;
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.greeting}>Good Morning,</Text>
-            <Text style={styles.username}>{displayName} 👋</Text>
-          </View>
-          <TouchableOpacity style={styles.notificationButton} onPress={() => Alert.alert('Notifikasi', 'Belum ada notifikasi baru.')}>
-            <Text style={styles.notificationIcon}>🔔</Text>
-            <View style={styles.notificationDot} />
-          </TouchableOpacity>
-        </View>
-
-        {/* Motor Profile Card */}
-        <Card style={styles.motorCard} onPress={() => navigation.navigate('Garage')}>
-          <View style={styles.motorCardContent}>
-            <View style={styles.motorIcon}>
-              <Text style={styles.motorEmoji}>🏍️</Text>
-            </View>
-            <View style={styles.motorInfo}>
-              <Text style={styles.motorName}>{displayMotor}</Text>
-              <Text style={styles.motorPlate}>B 1234 XYZ</Text>
-            </View>
-            <Badge label="Aktif" variant="success" />
-          </View>
-        </Card>
-
-        {/* Quick Stats */}
-        <SectionTitle title="📊 Stats Mingguan" action="Detail" onPress={() => navigation.navigate('RideHistory')} />
-        <View style={styles.statsContainer}>
-          {quickStats.map((stat, index) => (
-            <TouchableOpacity key={index} style={styles.statCard} onPress={() => navigation.navigate('RideHistory')}>
-              <Text style={styles.statValue}>{stat.value}</Text>
-              <Text style={styles.statUnit}>{stat.unit}</Text>
-              <Text style={styles.statLabel}>{stat.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {/* Nearby Events */}
-        <SectionTitle title="🎉 Event Terdekat" action="Lihat Semua" onPress={() => navigation.navigate('Events')} />
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false}
-          style={styles.eventsScroll}
-        >
-          {nearbyEvents.map((event) => (
-            <Card key={event.id} style={styles.eventCard} onPress={() => navigation.navigate('Events')}>
-              <View style={styles.eventBadge}>
-                <Badge label={event.location} variant="info" />
-              </View>
-              <Text style={styles.eventTitle}>{event.title}</Text>
-              <Text style={styles.eventDate}>📅 {event.date}</Text>
-              <Text style={styles.eventParticipants}>
-                👥 {event.participants} peserta
-              </Text>
-            </Card>
-          ))}
-        </ScrollView>
-
-        {/* Quick Actions */}
-        <SectionTitle title="⚡ Quick Actions" />
-        <View style={styles.quickActions}>
-          <TouchableOpacity style={styles.actionButton} onPress={() => navigation.navigate('RideHistory')}>
-            <Text style={styles.actionIcon}>🗺️</Text>
-            <Text style={styles.actionLabel}>History</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton} onPress={() => navigation.navigate('Garage')}>
-            <Text style={styles.actionIcon}>🔧</Text>
-            <Text style={styles.actionLabel}>Garage</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton} onPress={() => navigation.navigate('Insurance')}>
-            <Text style={styles.actionIcon}>🛡️</Text>
-            <Text style={styles.actionLabel}>Insurance</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton} onPress={() => navigation.navigate('Parts')}>
-            <Text style={styles.actionIcon}>🛒</Text>
-            <Text style={styles.actionLabel}>Shop</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Fuel Tracker */}
-        <Card style={styles.fuelCard}>
-          <View style={styles.fuelHeader}>
-            <Text style={styles.fuelTitle}>⛽ Fuel Efficiency</Text>
-            <Badge label="Baik" variant="success" />
-          </View>
-          <View style={styles.fuelStats}>
-            <View style={styles.fuelStat}>
-              <Text style={styles.fuelValue}>42.5</Text>
-              <Text style={styles.fuelLabel}>km/liter</Text>
-            </View>
-            <View style={styles.fuelDivider} />
-            <View style={styles.fuelStat}>
-              <Text style={styles.fuelValue}>Rp 145K</Text>
-              <Text style={styles.fuelLabel}>minggu ini</Text>
-            </View>
-          </View>
-        </Card>
-
-        <View style={styles.bottomSpace} />
-      </ScrollView>
-    </SafeAreaView>
+    <W style={[ts.card, style]} onPress={onPress} activeOpacity={0.85}>
+      {children}
+    </W>
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  scrollView: {
-    flex: 1,
-    paddingHorizontal: spacing.md,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: spacing.lg,
-  },
-  greeting: {
-    fontSize: fontSize.md,
-    color: colors.textSecondary,
-  },
-  username: {
-    fontSize: fontSize.xxl,
-    fontWeight: '700',
-    color: colors.text,
-  },
-  notificationButton: {
-    width: 48,
-    height: 48,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.surface,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  notificationIcon: {
-    fontSize: 24,
-  },
-  notificationDot: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: colors.secondary,
-  },
-  motorCard: {
-    marginBottom: spacing.lg,
-  },
-  motorCardContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  motorIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: borderRadius.md,
-    backgroundColor: colors.surfaceLight,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: spacing.md,
-  },
-  motorEmoji: {
-    fontSize: 32,
-  },
-  motorInfo: {
-    flex: 1,
-  },
-  motorName: {
-    fontSize: fontSize.lg,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  motorPlate: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-    marginTop: 2,
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: spacing.lg,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    marginHorizontal: spacing.xs,
-    alignItems: 'center',
-  },
-  statValue: {
-    fontSize: fontSize.xxl,
-    fontWeight: '700',
-    color: colors.primary,
-  },
-  statUnit: {
-    fontSize: fontSize.xs,
-    color: colors.textSecondary,
-  },
-  statLabel: {
-    fontSize: fontSize.sm,
-    color: colors.text,
-    marginTop: spacing.xs,
-  },
-  eventsScroll: {
-    marginLeft: -spacing.md,
-    marginRight: -spacing.md,
-    paddingLeft: spacing.md,
-    marginBottom: spacing.lg,
-  },
-  eventCard: {
-    width: 200,
-    marginRight: spacing.md,
-  },
-  eventBadge: {
-    marginBottom: spacing.sm,
-  },
-  eventTitle: {
-    fontSize: fontSize.md,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: spacing.xs,
-  },
-  eventDate: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-    marginBottom: spacing.xs,
-  },
-  eventParticipants: {
-    fontSize: fontSize.sm,
-    color: colors.primary,
-  },
-  quickActions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    marginBottom: spacing.lg,
-  },
-  actionButton: {
-    width: '23%',
-    aspectRatio: 1,
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  actionIcon: {
-    fontSize: 28,
-    marginBottom: spacing.xs,
-  },
-  actionLabel: {
-    fontSize: fontSize.xs,
-    color: colors.text,
-    textAlign: 'center',
-  },
-  fuelCard: {
-    marginBottom: spacing.lg,
-  },
-  fuelHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  fuelTitle: {
-    fontSize: fontSize.lg,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  fuelStats: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  fuelStat: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  fuelValue: {
-    fontSize: fontSize.xxl,
-    fontWeight: '700',
-    color: colors.primary,
-  },
-  fuelLabel: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-  },
-  fuelDivider: {
-    width: 1,
-    height: 40,
-    backgroundColor: colors.border,
-  },
-  bottomSpace: {
-    height: 100,
-  },
-});
+const ControlButton = ({ icon, label, active, onPress }: any) => (
+  <TouchableOpacity style={ts.controlBtn} onPress={onPress} activeOpacity={0.7}>
+    <View style={[ts.iconCircle, active && ts.iconCircleActive]}>
+      <MaterialCommunityIcons name={icon} size={24} color={active ? colors.accent : colors.textSecondary} />
+    </View>
+    <Text style={ts.controlLabel}>{label}</Text>
+  </TouchableOpacity>
+);
 
-export default HomeScreen;
+export default function HomeScreen({ navigation }: any) {
+  const { user } = useAuth();
+  const displayName = user?.user_metadata?.name || user?.email?.split('@')[0] || 'Rider';
+
+  const [bikeName, setBikeName] = useState('Ducati Panigale V4');
+  const [battery, setBattery] = useState(85);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [isLocked, setIsLocked] = useState(true);
+  const [isLightsOn, setIsLightsOn] = useState(false);
+
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    // Simulate fetching
+    setTimeout(() => {
+      setLoading(false);
+      setRefreshing(false);
+    }, 1000);
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchData();
+  };
+
+  return (
+    <SafeAreaView style={ts.container}>
+      <View style={ts.header}>
+        <View>
+          <TouchableOpacity style={ts.bikeSelector}>
+            <Text style={ts.bikeTitle}>{bikeName}</Text>
+            <Ionicons name="chevron-down" size={16} color={colors.textSecondary} />
+          </TouchableOpacity>
+          <View style={ts.statusRow}>
+            <View style={[ts.batteryBar, { backgroundColor: battery > 20 ? colors.accent : colors.error, width: 24 }]} />
+            <Text style={[ts.statusText, { color: battery > 20 ? colors.accent : colors.error }]}>{battery}%</Text>
+            <MaterialCommunityIcons name="lightning-bolt" size={14} color={colors.accent} />
+          </View>
+          <Text style={ts.parkedText}>Parkir · Dipantau Sentry</Text>
+        </View>
+        <View style={ts.headerIcons}>
+          <TouchableOpacity style={ts.headerIconBtn}>
+            <Ionicons name="chatbox-ellipses-outline" size={22} color={colors.text} />
+          </TouchableOpacity>
+          <TouchableOpacity style={ts.headerIconBtn} onPress={() => navigation.navigate('Profile')}>
+            <Ionicons name="menu-outline" size={26} color={colors.text} />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={ts.scrollContent}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />}
+      >
+        {/* Hero Image */}
+        <View style={ts.heroContainer}>
+          <Image 
+            source={{ uri: 'https://images.unsplash.com/photo-1558981403-c5f91cbba527?auto=format&fit=crop&w=800&q=80' }} 
+            style={ts.heroImage}
+            resizeMode="contain"
+          />
+        </View>
+
+        {/* Quick Controls Grid */}
+        <View style={ts.controlsGrid}>
+          <ControlButton 
+            icon={isLocked ? "lock" : "lock-open"} 
+            label={isLocked ? "Terkunci" : "Terbuka"} 
+            active={!isLocked} 
+            onPress={() => setIsLocked(!isLocked)} 
+          />
+          <ControlButton icon="fan" label="Fan" active={false} />
+          <ControlButton 
+            icon="flashlight" 
+            label="Lampu" 
+            active={isLightsOn} 
+            onPress={() => setIsLightsOn(!isLightsOn)} 
+          />
+          <ControlButton icon="car-sports" label="Bagasi" active={false} />
+        </View>
+
+        {/* Info Card */}
+        <TeslaCard style={ts.infoCard}>
+          <View style={ts.cardHeader}>
+            <Text style={ts.cardTitle}>Status Kendaraan: 80% · Siap</Text>
+            <Text style={ts.cardSubtitle}>Standby · Mesin Dingin</Text>
+          </View>
+          
+          <View style={ts.progressContainer}>
+            <View style={ts.progressBarBg}>
+              <View style={[ts.progressBarFill, { width: '80%' }]} />
+            </View>
+            <View style={ts.progressThumb} />
+          </View>
+
+          <View style={ts.infoTipRow}>
+            <View style={ts.tipIcon}>
+              <Ionicons name="information-circle" size={18} color={colors.accent} />
+            </View>
+            <View style={ts.tipTextContainer}>
+              <Text style={ts.tipTitle}>Tips Perawatan</Text>
+              <Text style={ts.tipText}>Untuk menjaga performa mesin, pastikan panaskan mesin minimal 2 menit sebelum digunakan di pagi hari.</Text>
+            </View>
+          </View>
+
+          <View style={ts.actionButtonsRow}>
+            <TouchableOpacity style={ts.secondaryActionBtn}>
+              <Text style={ts.secondaryActionText}>Mulai Ride</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={ts.secondaryActionBtn}>
+              <Text style={ts.secondaryActionText}>Buka Bagasi</Text>
+            </TouchableOpacity>
+          </View>
+        </TeslaCard>
+
+        {/* Bottom Menu Items */}
+        <TouchableOpacity style={ts.menuItem} onPress={() => navigation.navigate('RideHistory')}>
+          <MaterialCommunityIcons name="steering" size={22} color={colors.textSecondary} style={ts.menuIcon} />
+          <Text style={ts.menuText}>Kontrol & Mode Berkendara</Text>
+          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={ts.menuItem} onPress={() => navigation.navigate('Leaderboard')}>
+          <MaterialCommunityIcons name="shield-check-outline" size={22} color={colors.textSecondary} style={ts.menuIcon} />
+          <Text style={ts.menuText}>Keamanan & Sentry Mode</Text>
+          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={ts.menuItem} onPress={() => navigation.navigate('Garage')}>
+          <MaterialCommunityIcons name="tools" size={22} color={colors.textSecondary} style={ts.menuIcon} />
+          <Text style={ts.menuText}>Servis & Perawatan</Text>
+          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={ts.menuItem} onPress={() => navigation.navigate('Achievements')}>
+          <MaterialCommunityIcons name=" trophy-outline" size={22} color={colors.textSecondary} style={ts.menuIcon} />
+          <Text style={ts.menuText}>Achievement & Reward</Text>
+          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+        </TouchableOpacity>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const ts = StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
+  header: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'flex-start', 
+    paddingHorizontal: spacing.lg, 
+    paddingTop: spacing.md,
+    paddingBottom: spacing.sm
+  },
+  bikeSelector: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  bikeTitle: { color: colors.text, fontSize: fontSize.xxl, fontWeight: '700' },
+  statusRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
+  batteryBar: { height: 10, borderRadius: 2 },
+  statusText: { fontSize: fontSize.md, fontWeight: '700' },
+  parkedText: { color: colors.textSecondary, fontSize: fontSize.sm, marginTop: 4 },
+  headerIcons: { flexDirection: 'row', gap: 16 },
+  headerIconBtn: { padding: 4 },
+  scrollContent: { paddingBottom: 40 },
+  heroContainer: { 
+    height: 220, 
+    width: '100%', 
+    justifyContent: 'center', 
+    alignItems: 'center',
+    marginVertical: spacing.lg
+  },
+  heroImage: { width: width * 0.9, height: 200 },
+  controlsGrid: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    paddingHorizontal: spacing.xl,
+    marginBottom: spacing.xl
+  },
+  controlBtn: { alignItems: 'center', width: 60 },
+  iconCircle: { 
+    width: 50, 
+    height: 50, 
+    borderRadius: 25, 
+    backgroundColor: '#111', 
+    justifyContent: 'center', 
+    alignItems: 'center',
+    marginBottom: 8
+  },
+  iconCircleActive: { backgroundColor: 'rgba(0,214,125,0.1)' },
+  controlLabel: { color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: '500' },
+  card: {
+    backgroundColor: colors.surface,
+    marginHorizontal: spacing.md,
+    borderRadius: borderRadius.lg,
+    padding: spacing.lg,
+    marginBottom: spacing.xl
+  },
+  infoCard: { padding: spacing.lg },
+  cardHeader: { marginBottom: spacing.md },
+  cardTitle: { color: colors.text, fontSize: fontSize.lg, fontWeight: '600' },
+  cardSubtitle: { color: colors.textSecondary, fontSize: fontSize.sm, marginTop: 2 },
+  progressContainer: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    marginVertical: spacing.md,
+    position: 'relative'
+  },
+  progressBarBg: { flex: 1, height: 4, backgroundColor: '#333', borderRadius: 2, overflow: 'hidden' },
+  progressBarFill: { height: '100%', backgroundColor: colors.accent },
+  progressThumb: { 
+    width: 14, 
+    height: 14, 
+    borderRadius: 7, 
+    backgroundColor: '#FFF', 
+    position: 'absolute', 
+    left: '80%', 
+    marginLeft: -7,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 4,
+    elevation: 5
+  },
+  infoTipRow: { flexDirection: 'row', gap: 12, marginTop: spacing.md },
+  tipIcon: { marginTop: 2 },
+  tipTextContainer: { flex: 1 },
+  tipTitle: { color: colors.accent, fontSize: fontSize.md, fontWeight: '600' },
+  tipText: { color: colors.textSecondary, fontSize: fontSize.sm, lineHeight: 20, marginTop: 4 },
+  actionButtonsRow: { flexDirection: 'row', gap: 12, marginTop: spacing.xl },
+  secondaryActionBtn: { 
+    flex: 1, 
+    backgroundColor: '#222', 
+    paddingVertical: 12, 
+    borderRadius: borderRadius.md, 
+    alignItems: 'center' 
+  },
+  secondaryActionText: { color: colors.text, fontSize: fontSize.sm, fontWeight: '600' },
+  menuItem: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    paddingHorizontal: spacing.lg, 
+    paddingVertical: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: '#111'
+  },
+  menuIcon: { marginRight: spacing.md },
+  menuText: { flex: 1, color: colors.text, fontSize: fontSize.md, fontWeight: '500' }
+});
