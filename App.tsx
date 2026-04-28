@@ -16,11 +16,26 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { colors, spacing, borderRadius } from './src/theme';
 import { LoginScreen, RegisterScreen } from './src/auth/AuthScreens';
-import { HomeScreen, EventsScreen, PartsScreen, CommunityScreen, ProfileScreen, GarageScreen, RideHistoryScreen, InsuranceScreen, NotificationsScreen, SupportScreen, CommunityDetailScreen, CartScreen, AdminScreen, LandingScreen } from './src/screens';
-import OnboardingScreen from './src/screens/OnboardingScreen';
-import RideReplayScreen from './src/screens/RideReplayScreen';
-import LeaderboardScreen from './src/screens/LeaderboardScreen';
-import AchievementScreen from './src/screens/AchievementScreen';
+import { 
+  HomeScreen, 
+  EventsScreen, 
+  PartsScreen, 
+  CommunityScreen, 
+  ProfileScreen, 
+  GarageScreen, 
+  RideHistoryScreen, 
+  InsuranceScreen, 
+  NotificationsScreen, 
+  SupportScreen, 
+  CommunityDetailScreen, 
+  CartScreen, 
+  AdminScreen, 
+  LandingScreen, 
+  OnboardingScreen,
+  RideReplayScreen,
+  LeaderboardScreen,
+  AchievementScreen
+} from './src/screens';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();

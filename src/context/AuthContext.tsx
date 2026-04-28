@@ -46,13 +46,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     initAuth();
 
     // 3. Listen for changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, currentSession) => {
-      setSession(currentSession);
-      setUser(currentSession?.user ?? null);
+    let subscription: { unsubscribe: () => void } | null = null;
+    try {
+      const { data } = supabase.auth.onAuthStateChange((_event, currentSession) => {
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
+        setLoading(false);
+      });
+      subscription = data.subscription;
+    } catch (e) {
+      console.error('Auth listener error:', e);
       setLoading(false);
-    });
+    }
 
-    return () => subscription.unsubscribe();
+    return () => subscription?.unsubscribe();
   }, []);
 
   const signUp = async (email: string, password: string, name?: string) => {
