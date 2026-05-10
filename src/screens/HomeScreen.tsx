@@ -4,6 +4,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { TeslaCard } from '../components/TeslaCard';
+import { FeatureCard } from '../components/FeatureCard';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
 
 const { width } = Dimensions.get('window');
@@ -134,36 +135,69 @@ export default function HomeScreen({ navigation }: any) {
           </View>
         </TeslaCard>
 
-        {/* Bottom Menu Items */}
-        <TouchableOpacity style={ts.menuItem} onPress={() => navigation.navigate('Configurator')}>
-          <MaterialCommunityIcons name="palette" size={22} color={colors.accent} style={ts.menuIcon} />
-          <Text style={ts.menuText}>3D Configurator</Text>
-          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-        </TouchableOpacity>
+        {/* Feature cards */}
+        <Text style={ts.sectionLabel}>JELAJAHI FITUR</Text>
 
-        <TouchableOpacity style={ts.menuItem} onPress={() => navigation.navigate('RideHistory')}>
-          <MaterialCommunityIcons name="steering" size={22} color={colors.textSecondary} style={ts.menuIcon} />
-          <Text style={ts.menuText}>Ride History & Tracker</Text>
-          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-        </TouchableOpacity>
+        <View style={ts.featureGrid}>
+          <FeatureCard
+            title="3D Configurator"
+            subtitle="Custom warna & velg motor virtual"
+            icon={{ lib: 'mci', name: 'palette' }}
+            accentColor={colors.accent}
+            badge="3D"
+            badgeTone="accent"
+            variant="hero"
+            onPress={() => navigation.navigate('Configurator')}
+          />
 
-        <TouchableOpacity style={ts.menuItem} onPress={() => navigation.navigate('ServiceTracker')}>
-          <MaterialCommunityIcons name="tools" size={22} color={colors.textSecondary} style={ts.menuIcon} />
-          <Text style={ts.menuText}>Servis & Perawatan</Text>
-          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-        </TouchableOpacity>
+          <FeatureCard
+            title="Ride History & Tracker"
+            subtitle="GPS live tracking + statistik"
+            icon={{ lib: 'mci', name: 'map-marker-path' }}
+            accentColor="#FF453A"
+            variant="hero"
+            onPress={() => navigation.navigate('RideHistory')}
+          />
 
-        <TouchableOpacity style={ts.menuItem} onPress={() => navigation.navigate('Leaderboard')}>
-          <MaterialCommunityIcons name="podium" size={22} color={colors.textSecondary} style={ts.menuIcon} />
-          <Text style={ts.menuText}>Leaderboard & Segments</Text>
-          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-        </TouchableOpacity>
-
-        <TouchableOpacity style={ts.menuItem} onPress={() => navigation.navigate('Achievements')}>
-          <MaterialCommunityIcons name="trophy-outline" size={22} color={colors.textSecondary} style={ts.menuIcon} />
-          <Text style={ts.menuText}>Achievement & Reward</Text>
-          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-        </TouchableOpacity>
+          <View style={ts.grid2}>
+            <FeatureCard
+              title="Servis"
+              subtitle="Oli, ban, rem"
+              icon={{ lib: 'mci', name: 'tools' }}
+              accentColor="#EBB040"
+              variant="compact"
+              onPress={() => navigation.navigate('ServiceTracker')}
+              style={ts.gridItem}
+            />
+            <FeatureCard
+              title="Leaderboard"
+              subtitle="Segment & group ride"
+              icon={{ lib: 'mci', name: 'podium' }}
+              accentColor="#A855F7"
+              variant="compact"
+              onPress={() => navigation.navigate('Leaderboard')}
+              style={ts.gridItem}
+            />
+            <FeatureCard
+              title="Achievements"
+              subtitle="Badge rider"
+              icon={{ lib: 'ion', name: 'trophy-outline' }}
+              accentColor="#0A84FF"
+              variant="compact"
+              onPress={() => navigation.navigate('Achievements')}
+              style={ts.gridItem}
+            />
+            <FeatureCard
+              title="Garage"
+              subtitle="Motor kolekasi"
+              icon={{ lib: 'mci', name: 'garage' }}
+              accentColor="#10B981"
+              variant="compact"
+              onPress={() => navigation.navigate('Garage')}
+              style={ts.gridItem}
+            />
+          </View>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -292,5 +326,10 @@ const ts = StyleSheet.create({
     borderBottomColor: '#111'
   },
   menuIcon: { marginRight: spacing.md },
-  menuText: { flex: 1, color: colors.text, fontSize: fontSize.md, fontWeight: '500' }
+  menuText: { flex: 1, color: colors.text, fontSize: fontSize.md, fontWeight: '500' },
+
+  sectionLabel: { color: colors.textMuted, fontSize: 10, fontWeight: '800', letterSpacing: 2, marginHorizontal: spacing.lg, marginTop: spacing.xl, marginBottom: spacing.md },
+  featureGrid: { paddingHorizontal: spacing.lg, gap: spacing.md, paddingBottom: spacing.xl },
+  grid2: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, marginTop: spacing.xs },
+  gridItem: { flexBasis: '48%', flexGrow: 1 },
 });

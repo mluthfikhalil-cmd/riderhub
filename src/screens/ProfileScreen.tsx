@@ -4,6 +4,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { TeslaCard } from '../components/TeslaCard';
+import { FeatureCard } from '../components/FeatureCard';
 import { CloseButton } from '../components/HeaderButtons';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
 import { buildStats, ACHIEVEMENTS, fetchUserAchievements, getTierColor } from '../utils/achievements';
@@ -145,21 +146,54 @@ export default function ProfileScreen({ navigation }: any) {
 
         {/* Menu Items */}
         <View style={ts.menuGroup}>
-          <TouchableOpacity style={ts.menuItem} onPress={() => navigation.navigate('Garage')}>
-            <MaterialCommunityIcons name="garage" size={20} color={colors.textSecondary} style={ts.menuIcon} />
-            <Text style={ts.menuText}>Garage Saya</Text>
-            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
-          </TouchableOpacity>
-          <TouchableOpacity style={ts.menuItem} onPress={() => navigation.navigate('Leaderboard')}>
-            <MaterialCommunityIcons name="podium" size={20} color={colors.textSecondary} style={ts.menuIcon} />
-            <Text style={ts.menuText}>Leaderboard</Text>
-            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
-          </TouchableOpacity>
-          <TouchableOpacity style={ts.menuItem} onPress={() => navigation.navigate('RideHistory')}>
-            <MaterialCommunityIcons name="history" size={20} color={colors.textSecondary} style={ts.menuIcon} />
-            <Text style={ts.menuText}>Riwayat Riding</Text>
-            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
-          </TouchableOpacity>
+          <FeatureCard
+            title="Garage Saya"
+            subtitle="Kelola motor koleksi"
+            icon={{ lib: 'mci', name: 'garage' }}
+            accentColor="#10B981"
+            variant="standard"
+            onPress={() => navigation.navigate('Garage')}
+          />
+          <FeatureCard
+            title="Leaderboard"
+            subtitle="Segment & peringkat rider"
+            icon={{ lib: 'mci', name: 'podium' }}
+            accentColor="#A855F7"
+            variant="standard"
+            onPress={() => navigation.navigate('Leaderboard')}
+          />
+          <FeatureCard
+            title="Riwayat Riding"
+            subtitle="Semua ride + GPS replay"
+            icon={{ lib: 'mci', name: 'history' }}
+            accentColor="#0A84FF"
+            variant="standard"
+            onPress={() => navigation.navigate('RideHistory')}
+          />
+          <FeatureCard
+            title="Service Tracker"
+            subtitle="Reminder oli, ban, rem"
+            icon={{ lib: 'mci', name: 'tools' }}
+            accentColor="#EBB040"
+            variant="standard"
+            onPress={() => navigation.navigate('ServiceTracker')}
+          />
+          <FeatureCard
+            title="Notifications"
+            subtitle="Alert & pengumuman"
+            icon={{ lib: 'ion', name: 'notifications-outline' }}
+            accentColor={colors.accent}
+            variant="standard"
+            onPress={() => navigation.navigate('Notifications')}
+          />
+          <FeatureCard
+            title="Support"
+            subtitle="FAQ & bantuan"
+            icon={{ lib: 'ion', name: 'help-circle-outline' }}
+            accentColor={colors.textSecondary}
+            variant="standard"
+            onPress={() => navigation.navigate('Support')}
+          />
         </View>
 
         <TouchableOpacity style={ts.signOutBtn} onPress={handleSignOut}>
@@ -235,17 +269,7 @@ const ts = StyleSheet.create({
   emptyBadges: { color: colors.textMuted, fontSize: fontSize.sm, textAlign: 'center', paddingVertical: spacing.sm },
   cardFooter: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: spacing.md, alignSelf: 'flex-end' },
   footerAction: { color: colors.accent, fontSize: fontSize.xs, fontWeight: '600' },
-  menuGroup: { marginTop: spacing.sm },
-  menuItem: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    paddingHorizontal: spacing.xl, 
-    paddingVertical: spacing.lg, 
-    borderBottomWidth: 1, 
-    borderBottomColor: '#111' 
-  },
-  menuIcon: { marginRight: spacing.md },
-  menuText: { flex: 1, color: colors.text, fontSize: fontSize.md, fontWeight: '500' },
+  menuGroup: { marginTop: spacing.lg, marginHorizontal: spacing.md, gap: spacing.sm },
   signOutBtn: { marginHorizontal: spacing.md, marginTop: spacing.xxl, paddingVertical: 16, borderRadius: borderRadius.md, borderWidth: 1, borderColor: '#333', alignItems: 'center' },
   signOutText: { color: colors.error, fontSize: fontSize.sm, fontWeight: '700', letterSpacing: 1 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'flex-end' },

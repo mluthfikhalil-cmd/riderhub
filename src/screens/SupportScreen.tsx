@@ -14,9 +14,11 @@ const SupportScreen = ({ navigation }: any) => {
   };
 
   const faqs = [
-    { q: 'Bagaimana cara mendaftarkan motor?', a: 'Buka menu Garage, klik tombol "+ Tambah Motor", lalu isi detail kendaraan Anda.' },
-    { q: 'Mengapa tracking saya tidak akurat?', a: 'Pastikan aplikasi memiliki izin lokasi (Location Permission) yang disetel ke "Selalu Izinkan".' },
-    { q: 'Apakah aplikasi ini berbayar?', a: 'RiderHub 100% gratis untuk semua fitur standar komunitas dan tracking.' },
+    { q: 'Bagaimana cara mendaftarkan motor?', a: 'Buka menu Garage, klik tombol "+ Tambah Motor", lalu isi detail kendaraan Anda.', icon: 'motorbike' },
+    { q: 'Mengapa tracking saya tidak akurat?', a: 'Pastikan aplikasi memiliki izin lokasi (Location Permission) yang disetel ke "Selalu Izinkan".', icon: 'crosshairs-gps' },
+    { q: 'Apakah aplikasi ini berbayar?', a: 'RiderHub 100% gratis untuk semua fitur standar komunitas dan tracking.', icon: 'gift-outline' },
+    { q: 'Bagaimana cara claim badge achievement?', a: 'Badge terunlock otomatis begitu kriteria tercapai (jarak, ride count, top speed, dll).', icon: 'trophy' },
+    { q: 'Saya mau jual parts di marketplace, gimana?', a: 'Marketplace saat ini kurasi oleh tim. Nanti akan ada fitur seller account untuk rider.', icon: 'store' },
   ];
 
   return (
@@ -47,7 +49,12 @@ const SupportScreen = ({ navigation }: any) => {
         
         {faqs.map((faq, index) => (
           <TeslaCard key={index} style={[ts.card, ts.faqCard]}>
-            <Text style={ts.faqQ}>{faq.q}</Text>
+            <View style={ts.faqHeader}>
+              <View style={ts.faqIconBox}>
+                <MaterialCommunityIcons name={faq.icon as any} size={18} color={colors.accent} />
+              </View>
+              <Text style={ts.faqQ}>{faq.q}</Text>
+            </View>
             <Text style={ts.faqA}>{faq.a}</Text>
           </TeslaCard>
         ))}
@@ -77,8 +84,10 @@ const ts = StyleSheet.create({
   emailBtnText: { color: colors.text, fontSize: 13, fontWeight: '800', letterSpacing: 1 },
   sectionTitle: { color: colors.textMuted, fontSize: 10, fontWeight: '800', letterSpacing: 2, marginBottom: spacing.lg },
   faqCard: { marginBottom: spacing.md },
-  faqQ: { color: colors.text, fontSize: 15, fontWeight: '700', marginBottom: 8 },
-  faqA: { color: colors.textSecondary, fontSize: 13, lineHeight: 20 },
+  faqHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 },
+  faqIconBox: { width: 36, height: 36, borderRadius: borderRadius.md, backgroundColor: 'rgba(0,214,125,0.1)', borderWidth: 1, borderColor: 'rgba(0,214,125,0.3)', justifyContent: 'center', alignItems: 'center' },
+  faqQ: { color: colors.text, fontSize: 15, fontWeight: '700', flex: 1 },
+  faqA: { color: colors.textSecondary, fontSize: 13, lineHeight: 20, marginLeft: 48 },
   bottomSpace: { height: 100 },
 });
 
