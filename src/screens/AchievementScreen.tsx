@@ -4,16 +4,8 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { ACHIEVEMENTS, buildStats, fetchUserAchievements, getTierColor } from '../utils/achievements';
+import { TeslaCard } from '../components/TeslaCard';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
-
-const TeslaCard = ({ children, style, onPress }: any) => {
-  const W = onPress ? TouchableOpacity : View;
-  return (
-    <W style={[ts.card, style]} onPress={onPress} activeOpacity={0.85}>
-      {children}
-    </W>
-  );
-};
 
 const TIER_LABELS: Record<string, string> = { bronze:'BRONZE', silver:'SILVER', gold:'GOLD', platinum:'PLATINUM' };
 
@@ -71,7 +63,7 @@ export default function AchievementScreen({ navigation }: any) {
         contentContainerStyle={ts.scrollPadding}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor={colors.accent} />}
       >
-        <TeslaCard style={ts.progressCard}>
+        <TeslaCard style={[ts.card, ts.progressCard]}>
           <View style={ts.progressTop}>
             <View style={ts.progressInfo}>
               <Text style={ts.progressVal}>{unlocked}<Text style={{ color: colors.textSecondary, fontSize: 16 }}>/{total}</Text></Text>
@@ -128,7 +120,7 @@ export default function AchievementScreen({ navigation }: any) {
             return (
               <TeslaCard
                 key={ach.id}
-                style={[ts.badgeCard, isUnlocked && { borderColor: tierColor }]}
+                style={[ts.card, ts.badgeCard, isUnlocked && { borderColor: tierColor }]}
               >
                 {!isUnlocked && <View style={ts.lockOverlay} />}
                 
@@ -165,7 +157,7 @@ export default function AchievementScreen({ navigation }: any) {
           const next = ACHIEVEMENTS.find(a => !unlockedIds.includes(a.id) && !a.secret);
           if (!next) return null;
           return (
-            <TeslaCard style={ts.nextCard}>
+            <TeslaCard style={[ts.card, ts.nextCard]}>
               <Text style={ts.nextLabel}>NEXT MILESTONE</Text>
               <View style={ts.nextRow}>
                 <Text style={ts.nextIcon}>{next.icon}</Text>
@@ -196,6 +188,7 @@ const ts = StyleSheet.create({
   card: { backgroundColor: colors.surface, borderRadius: borderRadius.lg, padding: spacing.lg, marginBottom: spacing.md },
   progressCard: { backgroundColor: '#111', padding: spacing.xl },
   progressTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.lg },
+  progressInfo: { flex: 1 },
   progressVal: { color: colors.text, fontSize: 32, fontWeight: '800' },
   progressLabel: { color: colors.textSecondary, fontSize: 12, marginTop: 4 },
   pctBox: { alignItems: 'flex-end' },
@@ -232,5 +225,3 @@ const ts = StyleSheet.create({
   nextDesc: { color: colors.textSecondary, fontSize: 11, marginTop: 2 },
   nextTier: { borderWidth: 1, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4 }
 });
-
-export default AchievementScreen;

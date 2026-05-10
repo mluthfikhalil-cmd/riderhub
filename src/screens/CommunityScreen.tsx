@@ -6,6 +6,7 @@ import {
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
+import { TeslaCard } from '../components/TeslaCard';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
 
 // ── Upload to Supabase Storage ──────────────────────────────
@@ -48,18 +49,12 @@ const uploadToSupabase = async (file: File): Promise<string | null> => {
   }
 };
 
-const TeslaCard = ({ children, style }: any) => (
-  <View style={[ts.card, style]}>
-    {children}
-  </View>
-);
-
-const communities = [
-  { id: 1, name: 'Honda CBR ID', members: '45.2K', emoji: '🏍️' },
-  { id: 2, name: 'NMAX Village', members: '32.8K', emoji: '🛵' },
-  { id: 3, name: 'Kawasaki W175', members: '18.5K', emoji: '🏁' },
-  { id: 4, name: 'Vespa ID', members: '28.1K', emoji: '🛵' },
-  { id: 5, name: 'Trail Adv', members: '15.3K', emoji: '🗺️' },
+const communities_fallback: any[] = [
+  { id: '1', name: 'Honda CBR ID', members: '45.2K', emoji: '🏍️' },
+  { id: '2', name: 'NMAX Village', members: '32.8K', emoji: '🛵' },
+  { id: '3', name: 'Kawasaki W175', members: '18.5K', emoji: '🏁' },
+  { id: '4', name: 'Vespa ID', members: '28.1K', emoji: '🛵' },
+  { id: '5', name: 'Trail Adv', members: '15.3K', emoji: '🗺️' },
 ];
 
 export default function CommunityScreen({ navigation }: any) {
@@ -68,6 +63,7 @@ export default function CommunityScreen({ navigation }: any) {
   const userMotor = user?.user_metadata?.motor || '';
 
   const [posts, setPosts] = useState<any[]>([]);
+  const [communities, setCommunities] = useState<any[]>([]);
   const [comments, setComments] = useState<Record<string, any[]>>({});
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -92,7 +88,18 @@ export default function CommunityScreen({ navigation }: any) {
       if (liked) setLikedPosts(new Set(JSON.parse(liked)));
     }
     fetchPosts();
+    fetchCommunities();
   }, []);
+
+  const fetchCommunities = async () => {
+    const { data } = await supabase.from('groups').select('*').eq('status', 'active').order('member_count', { ascending: false }).limit(10);
+    if (data && data.length > 0) {
+      setCommunities(data.map((g: any) => ({ id: g.id, name: g.name, members: g.member_count > 1000 ? `${(g.member_count/1000).toFixed(1)}K` : `${g.member_count || 1}`, emoji: '🏍️' })));
+    } else {
+      // Fallback if no groups table data
+      setCommunities(communities_fallback);
+    }
+  };
 
   const fetchPosts = useCallback(async () => {
     const { data } = await supabase.from('posts').select('*').order('created_at', { ascending: false }).limit(20);
@@ -242,7 +249,7 @@ export default function CommunityScreen({ navigation }: any) {
         {loading ? (
           <Text style={ts.loadingText}>Loading discovery feed...</Text>
         ) : posts.length === 0 ? (
-          <TeslaCard style={ts.emptyCard}>
+          <TeslaCard style={[ts.card, ts.emptyCard]}>
             <Ionicons name="megaphone-outline" size={48} color={colors.textMuted} />
             <Text style={ts.emptyText}>Be the first to share something!</Text>
             <TouchableOpacity style={ts.createBtn} onPress={() => setCreateModal(true)}>
@@ -251,7 +258,7 @@ export default function CommunityScreen({ navigation }: any) {
           </TeslaCard>
         ) : (
           posts.map((post) => (
-            <TeslaCard key={post.id} style={ts.postCard}>
+            <TeslaCard key={post.id} style={[ts.card, ts.postCard]}>
               <View style={ts.postHeader}>
                 <View style={ts.avatarCircle}>
                   <Text style={ts.avatarText}>{post.user_name?.charAt(0).toUpperCase()}</Text>

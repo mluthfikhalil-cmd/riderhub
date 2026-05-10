@@ -30,10 +30,18 @@
       "favicon": "./assets/favicon.png",
       "bundler": "metro",
       "output": "single",
-      "backgroundColor": "#0D0D0D",
+      "backgroundColor": "#000000",
+      "themeColor": "#00D67D",
+      "name": "RiderHub",
+      "shortName": "RiderHub",
+      "description": "All-in-One App untuk Pemotor Indonesia — ride tracker, marketplace parts, komunitas, servis tracker & 3D configurator.",
+      "display": "standalone",
+      "orientation": "portrait",
+      "lang": "id",
+      "startUrl": "/",
       "meta": {
         "title": "RiderHub - All-in-One App untuk Pemotor Indonesia",
-        "description": "Marketplace spareparts, event touring, komunitas rider, dan fitur lengkap untuk pemotor Indonesia.",
+        "description": "Marketplace spareparts, event touring, komunitas rider, ride tracking, service tracker, dan fitur lengkap untuk pemotor Indonesia.",
         "ogImage": "./assets/icon.png"
       }
     },

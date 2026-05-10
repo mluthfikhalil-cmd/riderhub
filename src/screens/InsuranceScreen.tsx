@@ -4,15 +4,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
-
-const TeslaCard = ({ children, style, onPress }: any) => {
-  const W = onPress ? TouchableOpacity : View;
-  return (
-    <W style={[ts.card, style]} onPress={onPress} activeOpacity={0.85}>
-      {children}
-    </W>
-  );
-};
+import { TeslaCard } from '../components/TeslaCard';
 
 const InsuranceScreen = ({ navigation }: any) => {
   const { user } = useAuth();
@@ -71,12 +63,17 @@ const InsuranceScreen = ({ navigation }: any) => {
       </View>
 
       <ScrollView style={ts.scrollView} showsVerticalScrollIndicator={false} contentContainerStyle={ts.scrollPadding}>
+        <View style={ts.soonBanner}>
+          <Ionicons name="information-circle" size={18} color={colors.warning} />
+          <Text style={ts.soonText}>Integrasi dokumen real coming soon. Expiry dates di halaman ini masih placeholder.</Text>
+        </View>
+
         <Text style={ts.sectionTitle}>VEHICLE DOCUMENTS</Text>
         
         {loading ? (
           <Text style={ts.loadingText}>Fetching documents...</Text>
         ) : documents.length === 0 ? (
-          <TeslaCard style={ts.emptyCard}>
+          <TeslaCard style={[ts.card, ts.emptyCard]}>
             <MaterialCommunityIcons name="file-document-outline" size={48} color={colors.textMuted} />
             <Text style={ts.emptyText}>No documents found</Text>
             <TouchableOpacity style={ts.addBtn} onPress={() => navigation.navigate('Garage')}>
@@ -85,7 +82,7 @@ const InsuranceScreen = ({ navigation }: any) => {
           </TeslaCard>
         ) : (
           documents.map((doc) => (
-            <TeslaCard key={doc.id} style={ts.docCard}>
+            <TeslaCard key={doc.id} style={[ts.card, ts.docCard]}>
               <View style={ts.docHeader}>
                 <View style={ts.docIconBox}>
                   <MaterialCommunityIcons 
@@ -118,7 +115,7 @@ const InsuranceScreen = ({ navigation }: any) => {
         )}
 
         <Text style={ts.sectionTitle}>PERSONAL PROTECTION</Text>
-        <TeslaCard style={ts.promoCard}>
+        <TeslaCard style={[ts.card, ts.promoCard]}>
           <View style={ts.promoHeader}>
             <MaterialCommunityIcons name="shield-airplane-outline" size={32} color={colors.accent} />
             <View>
@@ -148,6 +145,8 @@ const ts = StyleSheet.create({
   scrollView: { flex: 1 },
   scrollPadding: { paddingHorizontal: spacing.lg, paddingBottom: 100 },
   sectionTitle: { color: colors.textMuted, fontSize: 10, fontWeight: '800', letterSpacing: 2, marginTop: spacing.xl, marginBottom: spacing.lg },
+  soonBanner: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(235,176,64,0.08)', borderWidth: 1, borderColor: 'rgba(235,176,64,0.3)', padding: spacing.md, borderRadius: borderRadius.md, marginTop: spacing.md },
+  soonText: { color: colors.warning, fontSize: 11, flex: 1, lineHeight: 16 },
   loadingText: { color: colors.textSecondary, textAlign: 'center', marginTop: 40 },
   card: { backgroundColor: colors.surface, borderRadius: borderRadius.lg, padding: spacing.lg },
   docCard: { marginBottom: spacing.md, padding: spacing.lg },

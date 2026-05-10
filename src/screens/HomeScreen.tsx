@@ -3,18 +3,10 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Ref
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
+import { TeslaCard } from '../components/TeslaCard';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
 
 const { width } = Dimensions.get('window');
-
-const TeslaCard = ({ children, style, onPress }: any) => {
-  const W = onPress ? TouchableOpacity : View;
-  return (
-    <W style={[ts.card, style]} onPress={onPress} activeOpacity={0.85}>
-      {children}
-    </W>
-  );
-};
 
 const ControlButton = ({ icon, label, active, onPress }: any) => (
   <TouchableOpacity style={ts.controlBtn} onPress={onPress} activeOpacity={0.7}>
@@ -29,21 +21,22 @@ export default function HomeScreen({ navigation }: any) {
   const { user } = useAuth();
   const displayName = user?.user_metadata?.name || user?.email?.split('@')[0] || 'Rider';
 
-  const [bikeName, setBikeName] = useState('Ducati Panigale V4');
-  const [battery, setBattery] = useState(85);
+  const [bikeName, setBikeName] = useState('');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [isLocked, setIsLocked] = useState(true);
-  const [isLightsOn, setIsLightsOn] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
-    // Simulate fetching
-    setTimeout(() => {
-      setLoading(false);
-      setRefreshing(false);
-    }, 1000);
-  }, []);
+    if (user?.id) {
+      const { data } = await supabase.from('bikes').select('*').eq('user_id', user.id).eq('is_primary', true).maybeSingle();
+      if (data) setBikeName(`${data.brand} ${data.model}`);
+      else setBikeName(user?.user_metadata?.motor || 'Motor Anda');
+    } else {
+      setBikeName('Motor Anda');
+    }
+    setLoading(false);
+    setRefreshing(false);
+  }, [user?.id]);
 
   useEffect(() => {
     fetchData();
@@ -56,26 +49,32 @@ export default function HomeScreen({ navigation }: any) {
 
   return (
     <SafeAreaView style={ts.container}>
+      {/* Cyberpunk Header */}
       <View style={ts.header}>
-        <View>
-          <TouchableOpacity style={ts.bikeSelector}>
-            <Text style={ts.bikeTitle}>{bikeName}</Text>
-            <Ionicons name="chevron-down" size={16} color={colors.textSecondary} />
-          </TouchableOpacity>
-          <View style={ts.statusRow}>
-            <View style={[ts.batteryBar, { backgroundColor: battery > 20 ? colors.accent : colors.error, width: 24 }]} />
-            <Text style={[ts.statusText, { color: battery > 20 ? colors.accent : colors.error }]}>{battery}%</Text>
-            <MaterialCommunityIcons name="lightning-bolt" size={14} color={colors.accent} />
+        {/* Neon accent line */}
+        <View style={ts.neonLine} />
+        <View style={ts.headerContent}>
+          <View>
+            <Text style={ts.greetText}>WELCOME BACK</Text>
+            <TouchableOpacity style={ts.bikeSelector}>
+              <Text style={ts.bikeTitle}>{loading ? '...' : (bikeName || 'Motor Anda')}</Text>
+              <Ionicons name="chevron-down" size={16} color="#a855f7" />
+            </TouchableOpacity>
+            <View style={ts.statusRow}>
+              <View style={ts.neonDot} />
+              <Text style={ts.statusText}>ONLINE · SENTRY ACTIVE</Text>
+            </View>
           </View>
-          <Text style={ts.parkedText}>Parkir · Dipantau Sentry</Text>
-        </View>
-        <View style={ts.headerIcons}>
-          <TouchableOpacity style={ts.headerIconBtn}>
-            <Ionicons name="chatbox-ellipses-outline" size={22} color={colors.text} />
-          </TouchableOpacity>
-          <TouchableOpacity style={ts.headerIconBtn} onPress={() => navigation.navigate('Profile')}>
-            <Ionicons name="menu-outline" size={26} color={colors.text} />
-          </TouchableOpacity>
+          <View style={ts.headerIcons}>
+            <TouchableOpacity style={ts.headerIconBtn} onPress={() => navigation.navigate('Notifications')}>
+              <Ionicons name="notifications-outline" size={22} color="#e879f9" />
+            </TouchableOpacity>
+            <TouchableOpacity style={ts.headerIconBtn} onPress={() => navigation.navigate('Profile')}>
+              <View style={ts.avatarCircle}>
+                <Text style={ts.avatarText}>{displayName.charAt(0).toUpperCase()}</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
 
@@ -87,28 +86,18 @@ export default function HomeScreen({ navigation }: any) {
         {/* Hero Image */}
         <View style={ts.heroContainer}>
           <Image 
-            source={{ uri: 'https://images.unsplash.com/photo-1558981403-c5f91cbba527?auto=format&fit=crop&w=800&q=80' }} 
+            source={require('../../assets/ducati-hero.png')} 
             style={ts.heroImage}
             resizeMode="contain"
           />
         </View>
 
-        {/* Quick Controls Grid */}
+        {/* Quick Actions */}
         <View style={ts.controlsGrid}>
-          <ControlButton 
-            icon={isLocked ? "lock" : "lock-open"} 
-            label={isLocked ? "Terkunci" : "Terbuka"} 
-            active={!isLocked} 
-            onPress={() => setIsLocked(!isLocked)} 
-          />
-          <ControlButton icon="fan" label="Fan" active={false} />
-          <ControlButton 
-            icon="flashlight" 
-            label="Lampu" 
-            active={isLightsOn} 
-            onPress={() => setIsLightsOn(!isLightsOn)} 
-          />
-          <ControlButton icon="car-sports" label="Bagasi" active={false} />
+          <ControlButton icon="map-marker-path" label="Ride" active onPress={() => navigation.navigate('RideHistory')} />
+          <ControlButton icon="wrench" label="Servis" onPress={() => navigation.navigate('ServiceTracker')} />
+          <ControlButton icon="trophy-outline" label="Badges" onPress={() => navigation.navigate('Achievements')} />
+          <ControlButton icon="palette" label="3D" onPress={() => navigation.navigate('Configurator')} />
         </View>
 
         {/* Info Card */}
@@ -136,36 +125,42 @@ export default function HomeScreen({ navigation }: any) {
           </View>
 
           <View style={ts.actionButtonsRow}>
-            <TouchableOpacity style={ts.secondaryActionBtn}>
+            <TouchableOpacity style={ts.secondaryActionBtn} onPress={() => navigation.navigate('RideHistory')}>
               <Text style={ts.secondaryActionText}>Mulai Ride</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={ts.secondaryActionBtn}>
-              <Text style={ts.secondaryActionText}>Buka Bagasi</Text>
+            <TouchableOpacity style={ts.secondaryActionBtn} onPress={() => navigation.navigate('ServiceTracker')}>
+              <Text style={ts.secondaryActionText}>Cek Servis</Text>
             </TouchableOpacity>
           </View>
         </TeslaCard>
 
         {/* Bottom Menu Items */}
+        <TouchableOpacity style={ts.menuItem} onPress={() => navigation.navigate('Configurator')}>
+          <MaterialCommunityIcons name="palette" size={22} color={colors.accent} style={ts.menuIcon} />
+          <Text style={ts.menuText}>3D Configurator</Text>
+          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+        </TouchableOpacity>
+
         <TouchableOpacity style={ts.menuItem} onPress={() => navigation.navigate('RideHistory')}>
           <MaterialCommunityIcons name="steering" size={22} color={colors.textSecondary} style={ts.menuIcon} />
-          <Text style={ts.menuText}>Kontrol & Mode Berkendara</Text>
+          <Text style={ts.menuText}>Ride History & Tracker</Text>
           <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
         </TouchableOpacity>
 
-        <TouchableOpacity style={ts.menuItem} onPress={() => navigation.navigate('Leaderboard')}>
-          <MaterialCommunityIcons name="shield-check-outline" size={22} color={colors.textSecondary} style={ts.menuIcon} />
-          <Text style={ts.menuText}>Keamanan & Sentry Mode</Text>
-          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-        </TouchableOpacity>
-
-        <TouchableOpacity style={ts.menuItem} onPress={() => navigation.navigate('Garage')}>
+        <TouchableOpacity style={ts.menuItem} onPress={() => navigation.navigate('ServiceTracker')}>
           <MaterialCommunityIcons name="tools" size={22} color={colors.textSecondary} style={ts.menuIcon} />
           <Text style={ts.menuText}>Servis & Perawatan</Text>
           <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
         </TouchableOpacity>
 
+        <TouchableOpacity style={ts.menuItem} onPress={() => navigation.navigate('Leaderboard')}>
+          <MaterialCommunityIcons name="podium" size={22} color={colors.textSecondary} style={ts.menuIcon} />
+          <Text style={ts.menuText}>Leaderboard & Segments</Text>
+          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+        </TouchableOpacity>
+
         <TouchableOpacity style={ts.menuItem} onPress={() => navigation.navigate('Achievements')}>
-          <MaterialCommunityIcons name=" trophy-outline" size={22} color={colors.textSecondary} style={ts.menuIcon} />
+          <MaterialCommunityIcons name="trophy-outline" size={22} color={colors.textSecondary} style={ts.menuIcon} />
           <Text style={ts.menuText}>Achievement & Reward</Text>
           <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
         </TouchableOpacity>
@@ -176,22 +171,44 @@ export default function HomeScreen({ navigation }: any) {
 
 const ts = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  header: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'flex-start', 
-    paddingHorizontal: spacing.lg, 
-    paddingTop: spacing.md,
-    paddingBottom: spacing.sm
+  header: {
+    paddingBottom: spacing.lg,
+    paddingTop: spacing.sm,
+    position: 'relative',
+    overflow: 'hidden',
+    backgroundColor: '#0d0221',
+    ...(Platform.OS === 'web' ? {
+      background: 'linear-gradient(135deg, #0d0221 0%, #1a0533 40%, #0a1628 70%, #001a2e 100%)',
+    } as any : {}),
   },
+  neonLine: {
+    height: 2,
+    backgroundColor: '#a855f7',
+    shadowColor: '#a855f7',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 8,
+    marginBottom: spacing.md,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    paddingHorizontal: spacing.lg,
+  },
+  greetText: { color: '#a855f7', fontSize: 9, letterSpacing: 3, fontWeight: '700', marginBottom: 4 },
   bikeSelector: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  bikeTitle: { color: colors.text, fontSize: fontSize.xxl, fontWeight: '700' },
-  statusRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
-  batteryBar: { height: 10, borderRadius: 2 },
-  statusText: { fontSize: fontSize.md, fontWeight: '700' },
-  parkedText: { color: colors.textSecondary, fontSize: fontSize.sm, marginTop: 4 },
-  headerIcons: { flexDirection: 'row', gap: 16 },
+  bikeTitle: { color: '#ffffff', fontSize: fontSize.xxl, fontWeight: '800', letterSpacing: -0.5,
+    textShadowColor: '#e879f9', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 10 },
+  statusRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 },
+  neonDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#00ff88',
+    shadowColor: '#00ff88', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 1, shadowRadius: 6 },
+  statusText: { color: '#00ff88', fontSize: 10, fontWeight: '600', letterSpacing: 1.5 },
+  headerIcons: { flexDirection: 'row', gap: 12, alignItems: 'center' },
   headerIconBtn: { padding: 4 },
+  avatarCircle: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(168,85,247,0.2)',
+    borderWidth: 1.5, borderColor: '#a855f7', justifyContent: 'center', alignItems: 'center' },
+  avatarText: { color: '#e879f9', fontSize: 14, fontWeight: '700' },
   scrollContent: { paddingBottom: 40 },
   heroContainer: { 
     height: 220, 

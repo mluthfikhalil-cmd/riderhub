@@ -1,19 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Modal, TextInput, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Modal, TextInput, RefreshControl, Platform } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
+import { TeslaCard } from '../components/TeslaCard';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
 import { buildStats, ACHIEVEMENTS, fetchUserAchievements, getTierColor } from '../utils/achievements';
-
-const TeslaCard = ({ children, style, onPress }: any) => {
-  const W = onPress ? TouchableOpacity : View;
-  return (
-    <W style={[ts.card, style]} onPress={onPress} activeOpacity={0.85}>
-      {children}
-    </W>
-  );
-};
 
 export default function ProfileScreen({ navigation }: any) {
   const { user, signOut } = useAuth();
@@ -37,7 +29,7 @@ export default function ProfileScreen({ navigation }: any) {
     if (!user?.id) return;
     const [ridesRes, bikeRes, ids] = await Promise.all([
       supabase.from('rides').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
-      supabase.from('bikes').select('*').eq('user_id', user.id).eq('is_primary', true).single(),
+      supabase.from('bikes').select('*').eq('user_id', user.id).eq('is_primary', true).maybeSingle(),
       fetchUserAchievements(user.id),
     ]);
     if (ridesRes.data) setRides(ridesRes.data);
@@ -61,7 +53,12 @@ export default function ProfileScreen({ navigation }: any) {
     setSaving(false);
   };
 
-  const handleSignOut = async () => { await signOut(); };
+  const handleSignOut = async () => {
+    const confirm =
+      Platform.OS === 'web' ? window.confirm('Keluar dari akun?') : true;
+    if (!confirm) return;
+    await signOut();
+  };
 
   const motorLabel = bike ? `${bike.brand} ${bike.model}` : (motorFromMeta || 'Belum ada motor');
 
@@ -99,7 +96,7 @@ export default function ProfileScreen({ navigation }: any) {
         </View>
 
         {/* Stats Grid */}
-        <TeslaCard style={ts.statsCard}>
+        <TeslaCard style={[ts.card, ts.statsCard]}>
           <Text style={ts.sectionLabel}>LIFETIME STATISTICS</Text>
           <View style={ts.statsGrid}>
             <View style={ts.statItem}>
@@ -122,7 +119,7 @@ export default function ProfileScreen({ navigation }: any) {
         </TeslaCard>
 
         {/* Achievements Preview */}
-        <TeslaCard style={ts.badgeCard} onPress={() => navigation.navigate('Achievements')}>
+        <TeslaCard style={[ts.card, ts.badgeCard]} onPress={() => navigation.navigate('Achievements')}>
           <View style={ts.badgeHeader}>
             <Text style={ts.sectionLabel}>RECENT BADGES</Text>
             <Text style={ts.badgeCount}>{achIds.length}/{ACHIEVEMENTS.length}</Text>

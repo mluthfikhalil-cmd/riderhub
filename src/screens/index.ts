@@ -15,5 +15,8 @@ export { default as AdminScreen } from './AdminScreen';
 export { default as LandingScreen } from './LandingScreen';
 export { default as OnboardingScreen } from './OnboardingScreen';
 export { default as RideReplayScreen } from './RideReplayScreen';
+export { default as RideSummaryScreen } from './RideSummaryScreen';
 export { default as LeaderboardScreen } from './LeaderboardScreen';
 export { default as AchievementScreen } from './AchievementScreen';
+export { default as ConfiguratorScreen } from './ConfiguratorScreen';
+export { default as ServiceTrackerScreen } from './ServiceTrackerScreen';

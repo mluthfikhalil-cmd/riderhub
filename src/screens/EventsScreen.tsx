@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Mod
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
+import { TeslaCard } from '../components/TeslaCard';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
 
 const CATS = ['SEMUA', 'SUNMORI', 'NIGHTRIDE', 'TOURING', 'RACING MEET', 'GRUP'];
@@ -14,15 +15,6 @@ const CAT_ICONS: Record<string, IName> = {
 };
 const STATUS_COLOR: Record<string, string> = { upcoming: colors.accent, pending: colors.warning, rejected: colors.error, active: colors.accent, past: colors.textMuted };
 const STATUS_LABEL: Record<string, string> = { upcoming: 'AKTIF', pending: 'MENUNGGU', rejected: 'DITOLAK', active: 'AKTIF', past: 'SELESAI' };
-
-const TeslaCard = ({ children, style, onPress }: any) => {
-  const W = onPress ? TouchableOpacity : View;
-  return (
-    <W style={[ts.card, style]} onPress={onPress} activeOpacity={0.85}>
-      {children}
-    </W>
-  );
-};
 
 const Field = ({ label, value, onChangeText, placeholder, multiline, keyboardType }: any) => (
   <View style={ts.fieldContainer}>
@@ -115,15 +107,20 @@ export default function EventsScreen({ navigation }: any) {
     const isJoined = joinedGroups.has(groupId);
     if (isJoined) {
       await supabase.from('group_members').delete().eq('group_id', groupId).eq('user_id', user.id);
-      await supabase.from('groups').update({ member_count: supabase.rpc('decrement', {}) }).eq('id', groupId);
     } else {
       await supabase.from('group_members').insert([{ group_id: groupId, user_id: user.id, user_name: userName }]);
     }
-    fetchAll(); setJoining('');
+    await fetchAll();
+    setJoining('');
   };
 
-  const visibleEvents = tab === 'SEMUA' ? events.filter(e => e.status === 'upcoming' || e.organizer_id === user?.id) :
-    tab === 'GRUP' ? [] : events.filter(e => e.category?.toLowerCase() === tab.toLowerCase().replace(' ', '_') || (e.category?.toUpperCase() === tab) || (e.organizer_id === user?.id && e.category?.toUpperCase() === tab));
+  const visibleEvents = (() => {
+    if (tab === 'GRUP') return [];
+    const base = events.filter((e) => e.status === 'upcoming' || e.organizer_id === user?.id);
+    if (tab === 'SEMUA') return base;
+    const want = tab.toLowerCase();
+    return base.filter((e) => (e.category || '').toLowerCase() === want);
+  })();
 
   const visibleGroups = tab === 'GRUP' || tab === 'SEMUA' ? groups.filter(g => g.status === 'active' || g.organizer_id === user?.id) : [];
 
@@ -135,7 +132,7 @@ export default function EventsScreen({ navigation }: any) {
           <Text style={ts.headerSubtitle}>Events & Community Groups</Text>
         </View>
         <View style={ts.headerActions}>
-          <TouchableOpacity style={ts.actionBtn} onPress={() => { setCreateModal('event'); setSubmitMsg(''); }}>
+          <TouchableOpacity style={ts.actionBtn} onPress={() => { setCreateModal(tab === 'GRUP' ? 'group' : 'event'); setSubmitMsg(''); }}>
             <Ionicons name="add" size={24} color={colors.text} />
           </TouchableOpacity>
         </View>
@@ -163,7 +160,7 @@ export default function EventsScreen({ navigation }: any) {
               const isJoined = joinedGroups.has(g.id);
               const isOwner = g.organizer_id === user?.id;
               return (
-                <TeslaCard key={g.id} style={ts.eventCard}>
+                <TeslaCard key={g.id} style={[ts.card, ts.eventCard]}>
                   <View style={ts.cardRow}>
                     <View style={ts.cardIconContainer}>
                       <Ionicons name={CAT_ICONS[g.category?.toUpperCase()] || 'people-outline'} size={24} color={colors.accent} />
@@ -201,7 +198,7 @@ export default function EventsScreen({ navigation }: any) {
           <>
             <Text style={ts.sectionTitle}>EVENT MENDATANG</Text>
             {visibleEvents.length === 0 && !loading ? (
-              <TeslaCard style={ts.emptyCard}>
+              <TeslaCard style={[ts.card, ts.emptyCard]}>
                 <Ionicons name="calendar-outline" size={48} color={colors.textMuted} />
                 <Text style={ts.emptyText}>Belum ada event</Text>
                 <TouchableOpacity style={ts.createBtn} onPress={() => { setCreateModal('event'); setSubmitMsg(''); }}>
@@ -212,7 +209,7 @@ export default function EventsScreen({ navigation }: any) {
               visibleEvents.map(ev => {
                 const isOwner = ev.organizer_id === user?.id;
                 return (
-                  <TeslaCard key={ev.id} style={ts.eventCard}>
+                  <TeslaCard key={ev.id} style={[ts.card, ts.eventCard]}>
                     <View style={ts.cardRow}>
                       <View style={ts.cardIconContainer}>
                         <Ionicons name={CAT_ICONS[ev.category?.toUpperCase()] || 'calendar-outline'} size={24} color={colors.primary} />
@@ -281,6 +278,36 @@ export default function EventsScreen({ navigation }: any) {
           </View>
         </View>
       </Modal>
+      {/* CREATE GROUP MODAL */}
+      <Modal visible={createModal === 'group'} transparent animationType="slide">
+        <View style={ts.modalOverlay}>
+          <View style={ts.modalContent}>
+            <View style={ts.modalHeader}>
+              <Text style={ts.modalTitle}>Buat Grup Baru</Text>
+              <TouchableOpacity onPress={() => setCreateModal(null)}>
+                <Ionicons name="close" size={24} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={ts.modalScroll}>
+              <Field label="NAMA GRUP" value={gName} onChangeText={setGName} placeholder="Palembang Riders..." />
+              <Text style={ts.fieldLabel}>KATEGORI</Text>
+              <View style={ts.catRow}>
+                {['Touring', 'Komunitas', 'Klub Motor', 'Racing'].map((c) => (
+                  <TouchableOpacity key={c} onPress={() => setGCat(c)} style={[ts.catItem, gCat === c && ts.catItemActive]}>
+                    <Text style={[ts.catText, gCat === c && ts.catTextActive]}>{c}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <Field label="LOKASI BASECAMP" value={gLoc} onChangeText={setGLoc} placeholder="Palembang..." />
+              <Field label="DESKRIPSI" value={gDesc} onChangeText={setGDesc} placeholder="Tentang grup kalian..." multiline />
+              {submitMsg ? <Text style={ts.submitMsg}>{submitMsg}</Text> : null}
+              <TouchableOpacity style={ts.submitBtn} onPress={submitGroup} disabled={submitting}>
+                <Text style={ts.submitBtnText}>{submitting ? 'Mengirim...' : 'Submit Grup'}</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -300,7 +327,7 @@ const ts = StyleSheet.create({
   actionBtn: { padding: 4 },
   tabScroll: { backgroundColor: colors.background, paddingVertical: spacing.sm },
   tabContent: { paddingHorizontal: spacing.lg, gap: 12 },
-  tabItem: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: borderRadius.full, borderExWidth: 1, borderColor: '#222' },
+  tabItem: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: borderRadius.full, borderWidth: 1, borderColor: '#222' },
   tabItemActive: { backgroundColor: '#222' },
   tabText: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: '600' },
   tabTextActive: { color: colors.text },
@@ -340,7 +367,7 @@ const ts = StyleSheet.create({
   input: { backgroundColor: '#111', borderRadius: borderRadius.md, padding: 12, color: colors.text, fontSize: fontSize.md },
   inputMultiline: { height: 100, textAlignVertical: 'top' },
   catRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: spacing.lg },
-  catItem: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: borderRadius.md, borderExWidth: 1, borderColor: '#333' },
+  catItem: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: borderRadius.md, borderWidth: 1, borderColor: '#333' },
   catItemActive: { backgroundColor: colors.accent, borderColor: colors.accent },
   catText: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: '600' },
   catTextActive: { color: '#000' },

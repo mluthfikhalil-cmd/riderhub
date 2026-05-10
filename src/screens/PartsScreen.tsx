@@ -1,20 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, TextInput, Modal, Platform, Image, Linking, Dimensions } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { TeslaCard } from '../components/TeslaCard';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
 import { supabase } from '../lib/supabase';
 
 const { width } = Dimensions.get('window');
 const categoryPills = ['Semua', 'Oli', 'Filter', 'Kampas', 'Busi', 'Ban', 'Aksesoris'];
-
-const TeslaCard = ({ children, style, onPress }: any) => {
-  const W = onPress ? TouchableOpacity : View;
-  return (
-    <W style={[ts.card, style]} onPress={onPress} activeOpacity={0.85}>
-      {children}
-    </W>
-  );
-};
 
 const PartsScreen = ({ navigation }: any) => {
   const [activeCategory, setActiveCategory] = useState('Semua');
@@ -22,7 +14,7 @@ const PartsScreen = ({ navigation }: any) => {
   const [selectedPart, setSelectedPart] = useState<any>(null);
   const [dbParts, setDbParts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [cartIds, setCartIds] = useState<number[]>([]);
+  const [cartIds, setCartIds] = useState<string[]>([]);
 
   useEffect(() => {
     fetchParts();
@@ -51,14 +43,14 @@ const PartsScreen = ({ navigation }: any) => {
     }
   };
 
-  const handleCart = (id: number) => {
-    const newCart = cartIds.includes(id) ? cartIds.filter(i => i !== id) : [...cartIds, id];
+  const handleCart = (id: string) => {
+    const newCart = cartIds.includes(id) ? cartIds.filter((i) => i !== id) : [...cartIds, id];
     setCartIds(newCart);
     try {
       if (typeof window !== 'undefined' && window.localStorage) {
         localStorage.setItem('riderhub_cart_items', JSON.stringify(newCart));
       }
-    } catch (_) {}
+    } catch (_) { /* noop */ }
   };
 
   const handleBuy = (part: any) => {
@@ -121,7 +113,7 @@ const PartsScreen = ({ navigation }: any) => {
         ) : (
           <View style={ts.grid}>
             {filteredParts.map(part => (
-              <TeslaCard key={part.id} style={ts.partCard} onPress={() => setSelectedPart(part)}>
+              <TeslaCard key={part.id} style={[ts.card, ts.partCard]} onPress={() => setSelectedPart(part)}>
                 <View style={ts.imageBox}>
                   {part.image_url ? (
                     <Image source={{ uri: part.image_url }} style={ts.image} resizeMode="cover" />

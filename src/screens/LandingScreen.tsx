@@ -2,15 +2,55 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, TextInput, Modal, Platform, ImageBackground, Dimensions } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
+import { TeslaCard } from '../components/TeslaCard';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const MARQUEE_ITEMS = [
+  '🏁 #1 RIDER PLATFORM', '🏍️ 45K+ ACTIVE RIDERS', '🛠️ 500+ PARTS TERVERIFIKASI',
+  '📍 120+ EVENT AKTIF', '🔥 8 SEGMENT PALEMBANG LIVE', '🎖️ BADGE BRONZE - PLATINUM',
+  '⚡ 3D CONFIGURATOR', '🛰️ GPS RIDE TRACKING', '📊 SERVICE INTERVAL AUTO',
+];
 
-const TeslaCard = ({ children, style }: any) => (
-  <View style={[ts.card, style]}>
-    {children}
-  </View>
-);
+const MarqueeTicker = () => {
+  if (Platform.OS !== 'web') {
+    return (
+      <View style={ts.marqueeFallback}>
+        <Text style={ts.marqueeFallbackText}>{MARQUEE_ITEMS.slice(0, 3).join('  ·  ')}</Text>
+      </View>
+    );
+  }
+  const content = [...MARQUEE_ITEMS, ...MARQUEE_ITEMS].map((item, i) => (
+    <span key={i} style={marqueeItemStyle}>{item}</span>
+  ));
+  return (
+    <div style={marqueeContainerStyle}>
+      <style>{marqueeKeyframes}</style>
+      <div style={marqueeTrackStyle}>{content}</div>
+    </div>
+  );
+};
+
+const marqueeContainerStyle: React.CSSProperties = {
+  width: '100%',
+  overflow: 'hidden',
+  padding: '14px 0',
+  borderTop: '1px solid #111',
+  borderBottom: '1px solid #111',
+  background: '#000',
+};
+const marqueeTrackStyle: React.CSSProperties = {
+  display: 'inline-flex',
+  whiteSpace: 'nowrap',
+  animation: 'riderhub-marquee 40s linear infinite',
+};
+const marqueeItemStyle: React.CSSProperties = {
+  color: '#8E8E93',
+  fontSize: 11,
+  fontWeight: 700,
+  letterSpacing: 2,
+  margin: '0 32px',
+};
+const marqueeKeyframes = `@keyframes riderhub-marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }`;
 
 const features = [
   { icon: 'garage', title: 'Digital Garage', desc: 'Manage your bikes, service schedules, and documents.' },
@@ -57,7 +97,7 @@ export default function LandingScreen() {
         {/* HERO SECTION */}
         <View style={ts.heroContainer}>
           <ImageBackground
-            source={{ uri: 'https://images.unsplash.com/photo-1558981403-c5f91cbba527?auto=format&fit=crop&q=80&w=2000' }}
+            source={require('../../assets/ducati-hero.png')}
             style={ts.heroImage}
           >
             <View style={ts.heroOverlay}>
@@ -107,6 +147,8 @@ export default function LandingScreen() {
           </View>
         </View>
 
+        <MarqueeTicker />
+
         {/* FEATURES GRID */}
         <View style={ts.section}>
           <Text style={ts.sectionLabel}>ECOSYSTEM</Text>
@@ -114,7 +156,7 @@ export default function LandingScreen() {
           
           <View style={ts.featuresGrid}>
             {features.map((f, i) => (
-              <TeslaCard key={i} style={ts.featureCard}>
+              <TeslaCard key={i} style={[ts.card, ts.featureCard]}>
                 <MaterialCommunityIcons name={f.icon as any} size={32} color={colors.accent} style={ts.featureIcon} />
                 <Text style={ts.featureTitle}>{f.title}</Text>
                 <Text style={ts.featureDesc}>{f.desc}</Text>
@@ -191,7 +233,7 @@ const ts = StyleSheet.create({
   navLoginBtn: { paddingHorizontal: 16, paddingVertical: 8 },
   navLoginText: { color: colors.text, fontSize: fontSize.sm, fontWeight: '600' },
   heroContent: { flex: 1, justifyContent: 'center', paddingBottom: 100 },
-  heroTitle: { color: colors.text, fontSize: 48, fontWeight: '700', lineHeight: 56 },
+  heroTitle: { color: colors.text, fontSize: 64, fontWeight: '700', lineHeight: 68, letterSpacing: -1.5 },
   heroSubtitle: { color: '#E0E0E0', fontSize: fontSize.md, marginTop: 24, lineHeight: 24, maxWidth: 300 },
   heroActions: { marginTop: 48, gap: 16 },
   primaryBtn: { backgroundColor: colors.accent, paddingVertical: 16, borderRadius: borderRadius.md, alignItems: 'center' },
@@ -210,7 +252,7 @@ const ts = StyleSheet.create({
   sectionTitle: { color: colors.text, fontSize: 32, fontWeight: '700', lineHeight: 40 },
   featuresGrid: { marginTop: 48, gap: 20 },
   card: { backgroundColor: '#111', borderRadius: borderRadius.lg, padding: spacing.xl },
-  featureCard: { borderExWidth: 1, borderColor: '#222' },
+  featureCard: { borderWidth: 1, borderColor: '#222' },
   featureIcon: { marginBottom: 16 },
   featureTitle: { color: colors.text, fontSize: fontSize.lg, fontWeight: '700' },
   featureDesc: { color: colors.textSecondary, fontSize: fontSize.sm, marginTop: 8, lineHeight: 20 },
@@ -230,6 +272,8 @@ const ts = StyleSheet.create({
   modalSubmitBtn: { backgroundColor: colors.accent, paddingVertical: 16, borderRadius: borderRadius.md, alignItems: 'center' },
   modalSubmitText: { color: colors.background, fontSize: fontSize.md, fontWeight: '700' },
   modalSwitchBtn: { marginTop: 24, alignItems: 'center' },
-  modalSwitchText: { color: colors.accent, fontSize: fontSize.sm, fontWeight: '600' }
+  modalSwitchText: { color: colors.accent, fontSize: fontSize.sm, fontWeight: '600' },
+  marqueeFallback: { paddingVertical: 14, backgroundColor: '#000', borderTopWidth: 1, borderBottomWidth: 1, borderTopColor: '#111', borderBottomColor: '#111', alignItems: 'center' },
+  marqueeFallbackText: { color: colors.textSecondary, fontSize: 11, fontWeight: '700', letterSpacing: 1 },
 });
 

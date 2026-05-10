@@ -1,0 +1,23 @@
+{
+  "name": "RiderHub",
+  "short_name": "RiderHub",
+  "description": "All-in-One App untuk Pemotor Indonesia — ride tracker, marketplace parts, komunitas, servis tracker & 3D configurator.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#000000",
+  "theme_color": "#00D67D",
+  "lang": "id",
+  "scope": "/",
+  "categories": ["lifestyle", "travel", "sports", "social"],
+  "icons": [
+    { "src": "/favicon.png",        "sizes": "48x48",   "type": "image/png" },
+    { "src": "/icon.png",           "sizes": "1024x1024", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/adaptive-icon.png",  "sizes": "1024x1024", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Ride Tracker", "short_name": "Ride", "url": "/history", "description": "Mulai tracking ride baru" },
+    { "name": "Garage",       "short_name": "Garage", "url": "/garage", "description": "Kelola motor" },
+    { "name": "Service",      "short_name": "Servis", "url": "/service", "description": "Service tracker & reminder" }
+  ]
+}

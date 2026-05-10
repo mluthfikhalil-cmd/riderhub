@@ -1,81 +1,91 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, TextInput, Modal, Platform, Dimensions } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, TextInput, Modal } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { colors, spacing, fontSize, borderRadius } from '../theme';
-import { supabase } from '../lib/supabase';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useAuth } from '../context/AuthContext';
+import { supabase } from '../lib/supabase';
+import { TeslaCard } from '../components/TeslaCard';
+import type { RootStackParamList } from '../navigation/types';
+import { colors, spacing, borderRadius } from '../theme';
 
-const { width } = Dimensions.get('window');
+type Props = NativeStackScreenProps<RootStackParamList, 'CommunityDetail'>;
 
-const TeslaCard = ({ children, style, onPress }: any) => {
-  const W = onPress ? TouchableOpacity : View;
-  return (
-    <W style={[ts.card, style]} onPress={onPress} activeOpacity={0.85}>
-      {children}
-    </W>
-  );
-};
-
-const CommunityDetailScreen = ({ route, navigation }: any) => {
+export default function CommunityDetailScreen({ route, navigation }: Props) {
   const { user } = useAuth();
-  const community = route.params?.community || {
-    id: 0,
-    name: 'Rider Collective',
-    members: '12K',
-    type: 'Official',
-    image: '🏎️',
-    posts: 42,
-  };
+  const community = route.params?.community;
 
-  const JOINED_KEY = `riderhub_joined_${community.id}`;
+  // No community param → bounce back to Community tab
+  useEffect(() => {
+    if (!community) {
+      navigation.replace('Main', { screen: 'Community' });
+    }
+  }, [community, navigation]);
+
+  if (!community) {
+    return (
+      <SafeAreaView style={ts.container}>
+        <View style={ts.emptyState}>
+          <Text style={ts.emptyText}>Community not found</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   const [isJoined, setIsJoined] = useState(false);
+  const [joining, setJoining] = useState(false);
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showPostModal, setShowPostModal] = useState(false);
   const [newPostTitle, setNewPostTitle] = useState('');
   const [posting, setPosting] = useState(false);
 
-  useEffect(() => {
-    try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        setIsJoined(localStorage.getItem(JOINED_KEY) === 'true');
-      }
-    } catch (_) {}
-    if (isJoined) fetchPosts();
-  }, [isJoined]);
+  const fetchMembership = useCallback(async () => {
+    if (!user?.id) return;
+    const { data } = await supabase
+      .from('group_members')
+      .select('group_id')
+      .eq('group_id', community.id)
+      .eq('user_id', user.id)
+      .maybeSingle();
+    setIsJoined(!!data);
+  }, [user?.id, community.id]);
 
-  const fetchPosts = async () => {
-    try {
-      setLoading(true);
-      const { data } = await supabase
-        .from('group_posts')
-        .select('*')
-        .eq('group_id', community.id)
-        .order('created_at', { ascending: false });
-      if (data) setPosts(data);
-    } catch (err) {} finally {
-      setLoading(false);
+  const fetchPosts = useCallback(async () => {
+    setLoading(true);
+    const { data } = await supabase
+      .from('group_posts')
+      .select('*')
+      .eq('group_id', community.id)
+      .order('created_at', { ascending: false });
+    setPosts(data || []);
+    setLoading(false);
+  }, [community.id]);
+
+  useEffect(() => { fetchMembership(); }, [fetchMembership]);
+  useEffect(() => { if (isJoined) fetchPosts(); }, [isJoined, fetchPosts]);
+
+  const handleJoin = async () => {
+    if (!user?.id || joining) return;
+    setJoining(true);
+    const userName = user.user_metadata?.name || user.email?.split('@')[0] || 'Rider';
+    if (isJoined) {
+      await supabase.from('group_members').delete().eq('group_id', community.id).eq('user_id', user.id);
+      setIsJoined(false);
+    } else {
+      await supabase.from('group_members').insert({ group_id: community.id, user_id: user.id, user_name: userName });
+      setIsJoined(true);
     }
-  };
-
-  const handleJoin = () => {
-    const next = !isJoined;
-    setIsJoined(next);
-    try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        localStorage.setItem(JOINED_KEY, String(next));
-      }
-    } catch (_) {}
+    setJoining(false);
   };
 
   const handlePost = async () => {
-    if (!newPostTitle.trim()) return;
+    if (!newPostTitle.trim() || !user?.id) return;
     setPosting(true);
     const { error } = await supabase.from('group_posts').insert([{
       group_id: community.id,
-      user_id: user?.id,
-      user_name: user?.user_metadata?.name || user?.email?.split('@')[0] || 'Rider',
-      title: newPostTitle,
+      user_id: user.id,
+      user_name: user.user_metadata?.name || user.email?.split('@')[0] || 'Rider',
+      title: newPostTitle.trim(),
     }]);
     if (!error) {
       setNewPostTitle('');
@@ -92,34 +102,31 @@ const CommunityDetailScreen = ({ route, navigation }: any) => {
           <Ionicons name="chevron-back" size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={ts.headerTitle}>Collective</Text>
-        <TouchableOpacity style={ts.shareBtn}>
-          <Ionicons name="share-outline" size={22} color={colors.text} />
-        </TouchableOpacity>
+        <View style={{ width: 44 }} />
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={ts.scrollPadding}>
         <View style={ts.hero}>
           <View style={ts.heroIconBox}>
-            <Text style={ts.heroEmoji}>{community.image}</Text>
+            <Text style={ts.heroEmoji}>{community.image || '🏍️'}</Text>
           </View>
           <Text style={ts.communityName}>{community.name}</Text>
           <View style={ts.badgeRow}>
-            <View style={ts.badge}><Text style={ts.badgeText}>{community.type.toUpperCase()}</Text></View>
+            {community.type && (
+              <View style={ts.badge}><Text style={ts.badgeText}>{community.type.toUpperCase()}</Text></View>
+            )}
             <Text style={ts.membersText}>{community.members} Members</Text>
           </View>
         </View>
 
-        <TeslaCard style={ts.aboutCard}>
+        <TeslaCard style={[ts.card, ts.aboutCard]}>
           <Text style={ts.sectionLabel}>ABOUT THIS COLLECTIVE</Text>
           <Text style={ts.aboutText}>
-            Welcome to the {community.name}. This is a private space for members to share technical insights, coordinate rides, and discuss the future of performance riding.
+            Welcome to {community.name}. Private space for members to share technical insights, coordinate rides, and discuss the future of performance riding.
           </Text>
-          <TouchableOpacity 
-            style={[ts.joinBtn, isJoined && ts.joinBtnActive]} 
-            onPress={handleJoin}
-          >
+          <TouchableOpacity style={[ts.joinBtn, isJoined && ts.joinBtnActive]} onPress={handleJoin} disabled={joining}>
             <Text style={[ts.joinBtnText, isJoined && ts.joinBtnTextActive]}>
-              {isJoined ? 'MEMBERSHIP ACTIVE ✓' : 'REQUEST MEMBERSHIP'}
+              {joining ? '...' : (isJoined ? 'MEMBERSHIP ACTIVE ✓' : 'REQUEST MEMBERSHIP')}
             </Text>
           </TouchableOpacity>
         </TeslaCard>
@@ -134,10 +141,10 @@ const CommunityDetailScreen = ({ route, navigation }: any) => {
         </View>
 
         {!isJoined ? (
-          <TeslaCard style={ts.lockedCard}>
+          <TeslaCard style={[ts.card, ts.lockedCard]}>
             <MaterialCommunityIcons name="lock-outline" size={48} color={colors.textMuted} />
             <Text style={ts.lockedTitle}>Restricted Access</Text>
-            <Text style={ts.lockedText}>You must be an active member of this collective to view or participate in discussions.</Text>
+            <Text style={ts.lockedText}>Join to view and participate in discussions.</Text>
           </TeslaCard>
         ) : (
           <View style={ts.feed}>
@@ -147,7 +154,7 @@ const CommunityDetailScreen = ({ route, navigation }: any) => {
               <Text style={ts.emptyText}>No discussions yet. Start a new topic.</Text>
             ) : (
               posts.map((post) => (
-                <TeslaCard key={post.id} style={ts.postCard}>
+                <TeslaCard key={post.id} style={[ts.card, ts.postCard]}>
                   <View style={ts.postTop}>
                     <View style={ts.miniAvatar}>
                       <Text style={ts.miniAvatarText}>{post.user_name?.[0]}</Text>
@@ -171,7 +178,6 @@ const CommunityDetailScreen = ({ route, navigation }: any) => {
         <View style={ts.bottomSpace} />
       </ScrollView>
 
-      {/* NEW POST MODAL */}
       <Modal visible={showPostModal} transparent animationType="slide">
         <View style={ts.modalOverlay}>
           <View style={ts.modalContent}>
@@ -189,11 +195,7 @@ const CommunityDetailScreen = ({ route, navigation }: any) => {
               onChangeText={setNewPostTitle}
               multiline
             />
-            <TouchableOpacity 
-              style={[ts.submitBtn, !newPostTitle.trim() && { opacity: 0.5 }]} 
-              onPress={handlePost} 
-              disabled={posting || !newPostTitle.trim()}
-            >
+            <TouchableOpacity style={[ts.submitBtn, (!newPostTitle.trim() || posting) && { opacity: 0.5 }]} onPress={handlePost} disabled={posting || !newPostTitle.trim()}>
               <Text style={ts.submitBtnText}>{posting ? 'POSTING...' : 'PUBLISH TOPIC'}</Text>
             </TouchableOpacity>
           </View>
@@ -201,14 +203,13 @@ const CommunityDetailScreen = ({ route, navigation }: any) => {
       </Modal>
     </SafeAreaView>
   );
-};
+}
 
 const ts = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
   backBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#111', justifyContent: 'center', alignItems: 'center' },
   headerTitle: { color: colors.text, fontSize: 18, fontWeight: '700' },
-  shareBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#111', justifyContent: 'center', alignItems: 'center' },
   scrollPadding: { paddingBottom: 100 },
   hero: { alignItems: 'center', paddingVertical: 40 },
   heroIconBox: { width: 100, height: 100, borderRadius: 50, backgroundColor: '#111', justifyContent: 'center', alignItems: 'center', marginBottom: 20, borderWidth: 1, borderColor: '#222' },
@@ -243,6 +244,7 @@ const ts = StyleSheet.create({
   commentCount: { color: colors.accent, fontSize: 11, fontWeight: '700' },
   loadingText: { color: colors.textSecondary, textAlign: 'center', marginTop: 40 },
   emptyText: { color: colors.textMuted, textAlign: 'center', marginTop: 40 },
+  emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   bottomSpace: { height: 100 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.95)', justifyContent: 'flex-end' },
   modalContent: { backgroundColor: '#000', borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: spacing.xl },
@@ -252,5 +254,3 @@ const ts = StyleSheet.create({
   submitBtn: { width: '100%', height: 60, borderRadius: 30, backgroundColor: colors.accent, justifyContent: 'center', alignItems: 'center' },
   submitBtnText: { color: '#000', fontSize: 15, fontWeight: '800', letterSpacing: 1 },
 });
-
-export default CommunityDetailScreen;

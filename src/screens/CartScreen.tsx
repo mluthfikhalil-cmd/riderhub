@@ -1,72 +1,86 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Platform, ActivityIndicator, Linking } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { supabase } from '../lib/supabase';
+import { TeslaCard } from '../components/TeslaCard';
+import type { RootStackParamList } from '../navigation/types';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
 
+type Props = NativeStackScreenProps<RootStackParamList, 'Cart'>;
+
 const CART_KEY = 'riderhub_cart_items';
+const QTY_KEY = 'riderhub_cart_qty';
 
-// Simplified parts data for the cart logic
-const allParts = [
-  { id: 1, name: 'Oli Shell Advance AX7 1L', category: 'Oli', price: 85000, icon: 'oil' },
-  { id: 2, name: 'Filter Udara Honda CBR150R Original', category: 'Filter', price: 65000, icon: 'air-filter' },
-  { id: 3, name: 'Kampas Rem Yamaha NMAX Original', category: 'Kampas', price: 120000, icon: 'disc-brake' },
-  { id: 4, name: 'Busi NGK Iridium IRUK7D', category: 'Busi', price: 45000, icon: 'flash' },
-  { id: 5, name: 'Ban Michelin Pilot Street 140/70-17', category: 'Ban', price: 450000, icon: 'tire' },
-];
+interface Part {
+  id: string;
+  title: string;
+  category: string;
+  price: number;
+  image_url: string | null;
+  image_emoji: string | null;
+}
 
-const TeslaCard = ({ children, style, onPress }: any) => {
-  const W = onPress ? TouchableOpacity : View;
-  return (
-    <W style={[ts.card, style]} onPress={onPress} activeOpacity={0.85}>
-      {children}
-    </W>
-  );
+const loadLocal = <T,>(key: string, fallback: T): T => {
+  try {
+    if (typeof window === 'undefined' || !window.localStorage) return fallback;
+    const raw = localStorage.getItem(key);
+    if (!raw) return fallback;
+    return JSON.parse(raw) as T;
+  } catch { return fallback; }
+};
+const saveLocal = (key: string, value: any) => {
+  try { if (typeof window !== 'undefined' && window.localStorage) localStorage.setItem(key, JSON.stringify(value)); } catch { /* noop */ }
 };
 
-export default function CartScreen({ navigation }: any) {
-  const [cartIds, setCartIds] = useState<number[]>([]);
-  const [qty, setQty] = useState<{ [id: number]: number }>({});
+const formatIDR = (n: number) => `Rp ${n.toLocaleString('id-ID')}`;
+
+export default function CartScreen({ navigation }: Props) {
+  const [cartIds, setCartIds] = useState<string[]>([]);
+  const [qty, setQty] = useState<Record<string, number>>({});
+  const [parts, setParts] = useState<Part[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    try {
-      if (Platform.OS === 'web' && window.localStorage) {
-        const saved = localStorage.getItem(CART_KEY);
-        if (saved) {
-          const ids: number[] = JSON.parse(saved);
-          setCartIds(ids);
-          const initQty: { [id: number]: number } = {};
-          ids.forEach(id => { initQty[id] = 1; });
-          setQty(initQty);
-        }
-      }
-    } catch (_) {}
+    const ids = loadLocal<string[]>(CART_KEY, []);
+    const savedQty = loadLocal<Record<string, number>>(QTY_KEY, {});
+    const q: Record<string, number> = {};
+    ids.forEach((id) => { q[id] = savedQty[id] || 1; });
+    setCartIds(ids); setQty(q);
   }, []);
 
-  const cartItems = allParts.filter(p => cartIds.includes(p.id));
-  const total = cartItems.reduce((sum, item) => sum + item.price * (qty[item.id] || 1), 0);
+  useEffect(() => {
+    const fetchParts = async () => {
+      if (cartIds.length === 0) { setParts([]); setLoading(false); return; }
+      setLoading(true);
+      const { data } = await supabase.from('parts').select('id, title, category, price, image_url, image_emoji').in('id', cartIds);
+      setParts((data || []) as Part[]);
+      setLoading(false);
+    };
+    fetchParts();
+  }, [cartIds]);
 
-  const removeItem = (id: number) => {
-    const newIds = cartIds.filter(i => i !== id);
-    setCartIds(newIds);
-    if (Platform.OS === 'web') {
-      localStorage.setItem(CART_KEY, JSON.stringify(newIds));
-    }
+  const total = parts.reduce((sum, p) => sum + p.price * (qty[p.id] || 1), 0);
+
+  const removeItem = (id: string) => {
+    const newIds = cartIds.filter((i) => i !== id);
+    setCartIds(newIds); saveLocal(CART_KEY, newIds);
+    const newQty = { ...qty }; delete newQty[id];
+    setQty(newQty); saveLocal(QTY_KEY, newQty);
   };
 
-  const changeQty = (id: number, delta: number) => {
-    setQty(prev => {
-      const newQty = Math.max(1, (prev[id] || 1) + delta);
-      return { ...prev, [id]: newQty };
-    });
+  const changeQty = (id: string, delta: number) => {
+    const newVal = Math.max(1, (qty[id] || 1) + delta);
+    const newQty = { ...qty, [id]: newVal };
+    setQty(newQty); saveLocal(QTY_KEY, newQty);
   };
 
   const handleCheckout = () => {
-    const itemLines = cartItems.map(item => `- ${item.name} x${qty[item.id] || 1} = Rp ${(item.price * (qty[item.id] || 1)).toLocaleString('id-ID')}`).join('\n');
-    const msg = `Halo, saya ingin memesan:\n${itemLines}\n\nTotal: Rp ${total.toLocaleString('id-ID')}\n\nMohon konfirmasi ketersediaan stok 🏍️`;
+    const lines = parts.map((p) => `- ${p.title} x${qty[p.id] || 1} = ${formatIDR(p.price * (qty[p.id] || 1))}`).join('\n');
+    const msg = `Halo, saya ingin memesan:\n${lines}\n\nTotal: ${formatIDR(total)}\n\nMohon konfirmasi ketersediaan stok.`;
     const url = `https://wa.me/6281234567890?text=${encodeURIComponent(msg)}`;
-    if (Platform.OS === 'web') {
-      window.open(url, '_blank');
-    }
+    if (Platform.OS === 'web') window.open(url, '_blank');
+    else Linking.openURL(url).catch(() => undefined);
   };
 
   return (
@@ -81,13 +95,15 @@ export default function CartScreen({ navigation }: any) {
         </View>
       </View>
 
-      {cartItems.length === 0 ? (
+      {loading ? (
+        <ActivityIndicator color={colors.accent} style={{ marginTop: 80 }} />
+      ) : parts.length === 0 ? (
         <View style={ts.emptyContainer}>
           <View style={ts.emptyIconBox}>
             <MaterialCommunityIcons name="cart-off" size={64} color={colors.textMuted} />
           </View>
           <Text style={ts.emptyTitle}>Cart is Empty</Text>
-          <Text style={ts.emptySubtitle}>You haven't added any premium components to your inventory yet.</Text>
+          <Text style={ts.emptySubtitle}>You haven't added any parts to your inventory yet.</Text>
           <TouchableOpacity style={ts.shopBtn} onPress={() => navigation.navigate('Main', { screen: 'Parts' })}>
             <Text style={ts.shopBtnText}>CONTINUE SHOPPING</Text>
           </TouchableOpacity>
@@ -95,15 +111,15 @@ export default function CartScreen({ navigation }: any) {
       ) : (
         <>
           <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={ts.scrollPadding}>
-            {cartItems.map(item => (
-              <TeslaCard key={item.id} style={ts.itemCard}>
+            {parts.map((item) => (
+              <TeslaCard key={item.id} style={[ts.card, ts.itemCard]}>
                 <View style={ts.itemRow}>
                   <View style={ts.itemIconBox}>
-                    <MaterialCommunityIcons name={item.icon as any} size={32} color={colors.accent} />
+                    <Text style={{ fontSize: 28 }}>{item.image_emoji || '🔧'}</Text>
                   </View>
                   <View style={ts.itemInfo}>
-                    <Text style={ts.itemName} numberOfLines={1}>{item.name}</Text>
-                    <Text style={ts.itemPrice}>Rp {(item.price * (qty[item.id] || 1)).toLocaleString('id-ID')}</Text>
+                    <Text style={ts.itemName} numberOfLines={2}>{item.title}</Text>
+                    <Text style={ts.itemPrice}>{formatIDR(item.price * (qty[item.id] || 1))}</Text>
                     <View style={ts.qtyRow}>
                       <TouchableOpacity style={ts.qtyBtn} onPress={() => changeQty(item.id, -1)}>
                         <Ionicons name="remove" size={16} color={colors.textSecondary} />
@@ -125,7 +141,7 @@ export default function CartScreen({ navigation }: any) {
           <View style={ts.checkoutBar}>
             <View style={ts.totalSection}>
               <Text style={ts.totalLabel}>TOTAL ESTIMATE</Text>
-              <Text style={ts.totalValue}>Rp {total.toLocaleString('id-ID')}</Text>
+              <Text style={ts.totalValue}>{formatIDR(total)}</Text>
             </View>
             <TouchableOpacity style={ts.checkoutBtn} onPress={handleCheckout}>
               <Text style={ts.checkoutBtnText}>CHECKOUT VIA WHATSAPP</Text>
@@ -168,5 +184,3 @@ const ts = StyleSheet.create({
   checkoutBtn: { backgroundColor: colors.accent, height: 56, borderRadius: 28, justifyContent: 'center', alignItems: 'center' },
   checkoutBtnText: { color: '#000', fontSize: 14, fontWeight: '800', letterSpacing: 1 },
 });
-
-export default CartScreen;

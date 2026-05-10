@@ -1,16 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Platform, Linking } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { TeslaCard } from '../components/TeslaCard';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
-
-const TeslaCard = ({ children, style, onPress }: any) => {
-  const W = onPress ? TouchableOpacity : View;
-  return (
-    <W style={[ts.card, style]} onPress={onPress} activeOpacity={0.85}>
-      {children}
-    </W>
-  );
-};
 
 const SupportScreen = ({ navigation }: any) => {
 
@@ -40,7 +32,7 @@ const SupportScreen = ({ navigation }: any) => {
       </View>
 
       <ScrollView style={ts.scrollView} showsVerticalScrollIndicator={false} contentContainerStyle={ts.scrollPadding}>
-        <TeslaCard style={ts.contactCard}>
+        <TeslaCard style={[ts.card, ts.contactCard]}>
           <MaterialCommunityIcons name="chat-processing-outline" size={48} color={colors.accent} />
           <Text style={ts.contactTitle}>Need Assistance?</Text>
           <Text style={ts.contactDesc}>Our support team is available 24/7 to help you with technical issues or general inquiries.</Text>
@@ -55,7 +47,7 @@ const SupportScreen = ({ navigation }: any) => {
         <Text style={ts.sectionTitle}>FREQUENTLY ASKED QUESTIONS</Text>
         
         {faqs.map((faq, index) => (
-          <TeslaCard key={index} style={ts.faqCard}>
+          <TeslaCard key={index} style={[ts.card, ts.faqCard]}>
             <Text style={ts.faqQ}>{faq.q}</Text>
             <Text style={ts.faqA}>{faq.a}</Text>
           </TeslaCard>

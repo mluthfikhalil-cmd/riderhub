@@ -1,20 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, TextInput, Modal, ActivityIndicator, Platform } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { TeslaCard } from '../components/TeslaCard';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
 import { supabase } from '../lib/supabase';
-
-const ADMIN_EMAIL = 'admin@riderhub.id';
-const ADMIN_PASSWORD = 'riderhub2026';
-
-const TeslaCard = ({ children, style, onPress }: any) => {
-  const W = onPress ? TouchableOpacity : View;
-  return (
-    <W style={[ts.card, style]} onPress={onPress} activeOpacity={0.85}>
-      {children}
-    </W>
-  );
-};
 
 const AdminScreen = ({ navigation }: any) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -58,12 +47,22 @@ const AdminScreen = ({ navigation }: any) => {
     setPendingGroups(grpRes.data||[]);
   };
 
-  const handleLogin = () => {
-    if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
+  const handleLogin = async () => {
+    setLoginError('');
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+
+      const isAdmin = !!data.user?.user_metadata?.is_admin;
+      if (!isAdmin) {
+        await supabase.auth.signOut({ scope: 'local' });
+        setLoginError('Akun ini bukan admin.');
+        return;
+      }
+
       setIsLoggedIn(true);
-      setLoginError('');
-    } else {
-      setLoginError('Invalid administrator credentials.');
+    } catch (e: any) {
+      setLoginError(e?.message || 'Gagal login admin.');
     }
   };
 
@@ -179,21 +178,21 @@ const AdminScreen = ({ navigation }: any) => {
           <View>
             <Text style={ts.sectionLabel}>OVERVIEW</Text>
             <View style={ts.statsGrid}>
-              <TeslaCard style={ts.statItem}>
+              <TeslaCard style={[ts.card, ts.statItem]}>
                 <Text style={ts.statVal}>{events.length}</Text>
                 <Text style={ts.statLabel}>Events</Text>
               </TeslaCard>
-              <TeslaCard style={ts.statItem}>
+              <TeslaCard style={[ts.card, ts.statItem]}>
                 <Text style={ts.statVal}>{parts.length}</Text>
                 <Text style={ts.statLabel}>Products</Text>
               </TeslaCard>
-              <TeslaCard style={ts.statItem}>
+              <TeslaCard style={[ts.card, ts.statItem]}>
                 <Text style={[ts.statVal, { color: colors.accent }]}>{pendingEvents.length + pendingGroups.length}</Text>
                 <Text style={ts.statLabel}>Pending</Text>
               </TeslaCard>
             </View>
 
-            <TeslaCard style={ts.infoCard}>
+            <TeslaCard style={[ts.card, ts.infoCard]}>
               <Ionicons name="information-circle" size={24} color={colors.accent} />
               <View style={{ flex: 1, marginLeft: 12 }}>
                 <Text style={ts.infoTitle}>System Status</Text>
@@ -207,7 +206,7 @@ const AdminScreen = ({ navigation }: any) => {
           <View>
             <Text style={ts.sectionLabel}>EVENT CONTROL</Text>
             {loading ? <ActivityIndicator color={colors.accent} /> : events.map(ev => (
-              <TeslaCard key={ev.id} style={ts.manageCard}>
+              <TeslaCard key={ev.id} style={[ts.card, ts.manageCard]}>
                 <View style={ts.manageRow}>
                   <View style={{ flex: 1 }}>
                     <Text style={ts.manageTitle}>{ev.title}</Text>
@@ -226,7 +225,7 @@ const AdminScreen = ({ navigation }: any) => {
           <View>
             <Text style={ts.sectionLabel}>MARKETPLACE CONTROL</Text>
             {loading ? <ActivityIndicator color={colors.accent} /> : parts.map(p => (
-              <TeslaCard key={p.id} style={ts.manageCard}>
+              <TeslaCard key={p.id} style={[ts.card, ts.manageCard]}>
                 <View style={ts.manageRow}>
                   <View style={{ flex: 1 }}>
                     <Text style={ts.manageTitle}>{p.name}</Text>
@@ -250,14 +249,14 @@ const AdminScreen = ({ navigation }: any) => {
           <View>
             <Text style={ts.sectionLabel}>PENDING APPROVALS</Text>
             {pendingEvents.length === 0 && pendingGroups.length === 0 ? (
-              <TeslaCard style={{ alignItems: 'center', paddingVertical: 40 }}>
+              <TeslaCard style={[ts.card, { alignItems: 'center', paddingVertical: 40 }]}>
                 <Ionicons name="checkmark-circle-outline" size={48} color={colors.success} />
                 <Text style={{ color: colors.textSecondary, marginTop: 12 }}>Queue is empty.</Text>
               </TeslaCard>
             ) : (
               <>
                 {pendingEvents.map(ev => (
-                  <TeslaCard key={ev.id} style={ts.approvalCard}>
+                  <TeslaCard key={ev.id} style={[ts.card, ts.approvalCard]}>
                     <Text style={ts.approvalType}>EVENT REQUEST</Text>
                     <Text style={ts.approvalTitle}>{ev.title}</Text>
                     <Text style={ts.approvalInfo}>By {ev.organizer_name} • {ev.location}</Text>

@@ -3,16 +3,8 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Ref
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
+import { TeslaCard } from '../components/TeslaCard';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
-
-const TeslaCard = ({ children, style, onPress }: any) => {
-  const W = onPress ? TouchableOpacity : View;
-  return (
-    <W style={[ts.card, style]} onPress={onPress} activeOpacity={0.85}>
-      {children}
-    </W>
-  );
-};
 
 const RANK_COLORS = [colors.accent, '#C0C0C0', '#CD7F32'];
 const RANK_ICONS = ['🥇', '🥈', '🥉'];
@@ -43,27 +35,27 @@ export default function LeaderboardScreen({ navigation }: any) {
   const [segEfforts, setSegEfforts] = useState<any[]>([]);
 
   const fetchAll = useCallback(async () => {
-    const [segRes, grpRes] = await Promise.all([
+    const [segRes, grpRes, effRes] = await Promise.all([
       supabase.from('segments').select('*').order('city').order('name'),
       supabase.from('group_rides')
         .select('*, group_ride_members(user_name, ride_id)')
         .order('created_at', { ascending: false })
         .limit(20),
+      // Fetch ALL efforts ordered by segment, time; we slice client-side for top-3
+      supabase.from('segment_efforts')
+        .select('*')
+        .order('segment_id', { ascending: true })
+        .order('elapsed_seconds', { ascending: true }),
     ]);
     const segs = segRes.data || [];
     setSegments(segs);
     setGroupRides(grpRes.data || []);
 
     const effortMap: Record<string, any[]> = {};
-    await Promise.all(segs.map(async (seg: any) => {
-      const { data } = await supabase
-        .from('segment_efforts')
-        .select('*')
-        .eq('segment_id', seg.id)
-        .order('elapsed_seconds', { ascending: true })
-        .limit(3);
-      effortMap[seg.id] = data || [];
-    }));
+    for (const e of (effRes.data || [])) {
+      if (!effortMap[e.segment_id]) effortMap[e.segment_id] = [];
+      if (effortMap[e.segment_id].length < 3) effortMap[e.segment_id].push(e);
+    }
     setEfforts(effortMap);
     setLoading(false);
     setRefreshing(false);
@@ -112,7 +104,7 @@ export default function LeaderboardScreen({ navigation }: any) {
         {tab === 'segment' && (
           <View style={ts.content}>
             {/* Summary Card */}
-            <TeslaCard style={ts.summaryCard}>
+            <TeslaCard style={[ts.card, ts.summaryCard]}>
               <View style={ts.summaryHeader}>
                 <View style={ts.avatarCircle}>
                   <Ionicons name="trophy-outline" size={24} color={colors.accent} />
@@ -144,7 +136,7 @@ export default function LeaderboardScreen({ navigation }: any) {
                 const route = SEGMENT_ROUTES[seg.name];
                 
                 return (
-                  <TeslaCard key={seg.id} onPress={() => openSegment(seg)} style={ts.segCard}>
+                  <TeslaCard key={seg.id} onPress={() => openSegment(seg)} style={[ts.card, ts.segCard]}>
                     <View style={ts.segHeader}>
                       <View style={{ flex: 1 }}>
                         <Text style={[ts.segTitle, iAmKing && { color: colors.accent }]}>
@@ -207,7 +199,7 @@ export default function LeaderboardScreen({ navigation }: any) {
 
         {tab === 'group' && (
           <View style={ts.content}>
-            <TeslaCard style={ts.infoCard}>
+            <TeslaCard style={[ts.card, ts.infoCard]}>
               <Ionicons name="information-circle-outline" size={24} color={colors.accent} style={{ marginBottom: 12 }} />
               <Text style={ts.infoTitle}>Automatic Detection</Text>
               <Text style={ts.infoDesc}>
@@ -218,7 +210,7 @@ export default function LeaderboardScreen({ navigation }: any) {
             <Text style={ts.sectionLabel}>LATEST GROUP RIDES</Text>
 
             {groupRides.length === 0 ? (
-              <TeslaCard style={ts.emptyGroupCard}>
+              <TeslaCard style={[ts.card, ts.emptyGroupCard]}>
                 <MaterialCommunityIcons name="bike-fast" size={48} color={colors.textMuted} />
                 <Text style={ts.emptyGroupText}>No group rides detected recently.</Text>
               </TeslaCard>
@@ -226,7 +218,7 @@ export default function LeaderboardScreen({ navigation }: any) {
               groupRides.map((grp) => {
                 const members = grp.group_ride_members || [];
                 return (
-                  <TeslaCard key={grp.id} style={ts.groupCard}>
+                  <TeslaCard key={grp.id} style={[ts.card, ts.groupCard]}>
                     <View style={ts.groupHeader}>
                       <View style={ts.groupIconBox}>
                         <Ionicons name="people" size={24} color={colors.text} />

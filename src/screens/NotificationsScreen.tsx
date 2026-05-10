@@ -1,106 +1,100 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Modal, Platform } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Modal, RefreshControl, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useAuth } from '../context/AuthContext';
+import { supabase } from '../lib/supabase';
+import { TeslaCard } from '../components/TeslaCard';
+import type { RootStackParamList } from '../navigation/types';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
 
-const initialNotifications = [
-  {
-    id: '1',
-    icon: 'notifications-outline',
-    title: 'Welcome to RiderHub',
-    message: 'Profile activated. Complete your garage setup and start your first ride tracking.',
-    time: 'JUST NOW',
-    category: 'System',
-    isRead: false,
-  },
-  {
-    id: '2',
-    icon: 'flag-outline',
-    title: 'Kawasaki Track Day',
-    message: 'New event at Sentul Circuit. Registration is now open for all members.',
-    time: '2H AGO',
-    category: 'Event',
-    isRead: false,
-  },
-  {
-    id: '3',
-    icon: 'cart-outline',
-    title: 'Premium Oil Discount',
-    message: 'Flash sale! 20% off all Motul and Shell oil products in the RiderHub store.',
-    time: '5H AGO',
-    category: 'Store',
-    isRead: false,
-  },
-  {
-    id: '4',
-    icon: 'people-outline',
-    title: 'New Community Post',
-    message: 'Honda CBR ID posted the monthly meetup schedule. Check location details.',
-    time: '1D AGO',
-    category: 'Community',
-    isRead: true,
-  },
-  {
-    id: '5',
-    icon: 'shield-checkmark-outline',
-    title: 'Registration Reminder',
-    message: 'Your vehicle registration for B 1234 XYZ is expiring in 30 days.',
-    time: '2D AGO',
-    category: 'Vehicle',
-    isRead: true,
-  },
-];
+type Props = NativeStackScreenProps<RootStackParamList, 'Notifications'>;
 
-const categoryColors: Record<string, string> = {
+interface Notification {
+  id: string;
+  user_id: string;
+  icon: string;
+  title: string;
+  message: string;
+  category: string;
+  is_read: boolean;
+  created_at: string;
+}
+
+const CATEGORY_COLORS: Record<string, string> = {
   System: colors.accent,
   Event: '#A855F7',
   Store: '#F59E0B',
   Community: '#10B981',
   Vehicle: '#EF4444',
+  Service: '#EBB040',
 };
 
-const TeslaCard = ({ children, style, onPress }: any) => {
-  const W = onPress ? TouchableOpacity : View;
-  return (
-    <W style={[ts.card, style]} onPress={onPress} activeOpacity={0.85}>
-      {children}
-    </W>
-  );
+const formatTime = (iso: string): string => {
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'JUST NOW';
+  if (mins < 60) return `${mins}M AGO`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}H AGO`;
+  const days = Math.floor(hours / 24);
+  return `${days}D AGO`;
 };
 
-export default function NotificationsScreen({ navigation }: any) {
-  const [notifications, setNotifications] = useState(initialNotifications);
-  const [selectedNotif, setSelectedNotif] = useState<any>(null);
+export default function NotificationsScreen({ navigation }: Props) {
+  const { user } = useAuth();
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [selectedNotif, setSelectedNotif] = useState<Notification | null>(null);
   const [activeFilter, setActiveFilter] = useState('All');
 
-  const unreadCount = notifications.filter(n => !n.isRead).length;
-  const categories = ['All', 'Event', 'Store', 'Community', 'Vehicle', 'System'];
+  const categories = ['All', 'Event', 'Store', 'Community', 'Vehicle', 'System', 'Service'];
 
-  const filtered = notifications.filter(n =>
-    activeFilter === 'All' || n.category === activeFilter
-  );
+  const fetchNotifs = useCallback(async () => {
+    if (!user?.id) return;
+    const { data, error } = await supabase
+      .from('notifications')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(50);
+    if (!error) setNotifications((data || []) as Notification[]);
+    setLoading(false); setRefreshing(false);
+  }, [user?.id]);
 
-  const markAllAsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+  useEffect(() => { fetchNotifs(); }, [fetchNotifs]);
+
+  const unreadCount = notifications.filter((n) => !n.is_read).length;
+  const filtered = notifications.filter((n) => activeFilter === 'All' || n.category === activeFilter);
+
+  const markAllAsRead = async () => {
+    if (!user?.id) return;
+    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+    await supabase.from('notifications').update({ is_read: true }).eq('user_id', user.id).eq('is_read', false);
   };
 
-  const openNotif = (notif: any) => {
+  const openNotif = async (notif: Notification) => {
     setSelectedNotif(notif);
-    setNotifications(prev =>
-      prev.map(n => n.id === notif.id ? { ...n, isRead: true } : n)
-    );
+    if (!notif.is_read) {
+      setNotifications((prev) => prev.map((n) => (n.id === notif.id ? { ...n, is_read: true } : n)));
+      await supabase.from('notifications').update({ is_read: true }).eq('id', notif.id);
+    }
   };
 
-  const deleteNotif = (id: string) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
+  const deleteNotif = async (id: string) => {
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
     setSelectedNotif(null);
+    await supabase.from('notifications').delete().eq('id', id);
   };
 
   return (
     <SafeAreaView style={ts.container}>
-      {/* Header */}
       <View style={ts.header}>
-        <View style={{ flex: 1 }}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={ts.backBtn}>
+          <Ionicons name="chevron-back" size={24} color={colors.text} />
+        </TouchableOpacity>
+        <View style={{ flex: 1, marginLeft: 16 }}>
           <Text style={ts.headerTitle}>Notifications</Text>
           <Text style={ts.headerSubtitle}>{unreadCount} UNREAD ALERTS</Text>
         </View>
@@ -109,76 +103,72 @@ export default function NotificationsScreen({ navigation }: any) {
         </TouchableOpacity>
       </View>
 
-      {/* Categories */}
       <View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={ts.filterScroll} contentContainerStyle={ts.filterContent}>
-          {categories.map(cat => (
-            <TouchableOpacity
-              key={cat}
-              style={[ts.filterPill, activeFilter === cat && ts.filterPillActive]}
-              onPress={() => setActiveFilter(cat)}
-            >
-              <Text style={[ts.filterText, activeFilter === cat && ts.filterTextActive]}>
-                {cat}
-              </Text>
+          {categories.map((cat) => (
+            <TouchableOpacity key={cat} style={[ts.filterPill, activeFilter === cat && ts.filterPillActive]} onPress={() => setActiveFilter(cat)}>
+              <Text style={[ts.filterText, activeFilter === cat && ts.filterTextActive]}>{cat}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
       </View>
 
-      {/* List */}
-      <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={ts.scrollPadding}>
-        {filtered.length === 0 ? (
+      <ScrollView
+        style={{ flex: 1 }}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={ts.scrollPadding}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchNotifs(); }} tintColor={colors.accent} />}
+      >
+        {loading ? (
+          <ActivityIndicator color={colors.accent} style={{ marginTop: 80 }} />
+        ) : filtered.length === 0 ? (
           <View style={ts.emptyContainer}>
             <Ionicons name="mail-open-outline" size={64} color={colors.textMuted} />
             <Text style={ts.emptyText}>No alerts in this category</Text>
           </View>
         ) : (
-          filtered.map(notif => (
-            <TeslaCard key={notif.id} onPress={() => openNotif(notif)} style={[ts.notifCard, !notif.isRead && ts.unreadCard]}>
+          filtered.map((notif) => (
+            <TeslaCard key={notif.id} onPress={() => openNotif(notif)} style={[ts.card, ts.notifCard, !notif.is_read && ts.unreadCard]}>
               <View style={ts.notifRow}>
                 <View style={[ts.iconBox, { backgroundColor: '#111' }]}>
-                  <Ionicons name={notif.icon as any} size={22} color={notif.isRead ? colors.textSecondary : colors.accent} />
+                  <Ionicons name={notif.icon as any} size={22} color={notif.is_read ? colors.textSecondary : colors.accent} />
                 </View>
                 <View style={ts.notifContent}>
                   <View style={ts.notifTopRow}>
-                    <Text style={[ts.notifCategory, { color: categoryColors[notif.category] }]}>{notif.category.toUpperCase()}</Text>
-                    <Text style={ts.notifTime}>{notif.time}</Text>
+                    <Text style={[ts.notifCategory, { color: CATEGORY_COLORS[notif.category] || colors.textMuted }]}>{notif.category.toUpperCase()}</Text>
+                    <Text style={ts.notifTime}>{formatTime(notif.created_at)}</Text>
                   </View>
-                  <Text style={[ts.notifTitle, !notif.isRead && { fontWeight: '800' }]} numberOfLines={1}>{notif.title}</Text>
+                  <Text style={[ts.notifTitle, !notif.is_read && { fontWeight: '800' }]} numberOfLines={1}>{notif.title}</Text>
                   <Text style={ts.notifPreview} numberOfLines={1}>{notif.message}</Text>
                 </View>
-                {!notif.isRead && <View style={ts.unreadDot} />}
+                {!notif.is_read && <View style={ts.unreadDot} />}
               </View>
             </TeslaCard>
           ))
         )}
       </ScrollView>
 
-      {/* Detail Modal */}
       <Modal visible={selectedNotif !== null} transparent animationType="fade">
         <View style={ts.modalOverlay}>
           <View style={ts.modalContent}>
             <View style={ts.modalHeader}>
-              <View style={[ts.modalTag, { backgroundColor: categoryColors[selectedNotif?.category] + '20' }]}>
-                <Text style={[ts.modalTagText, { color: categoryColors[selectedNotif?.category] }]}>{selectedNotif?.category.toUpperCase()}</Text>
+              <View style={[ts.modalTag, { backgroundColor: (CATEGORY_COLORS[selectedNotif?.category || 'System'] || colors.accent) + '20' }]}>
+                <Text style={[ts.modalTagText, { color: CATEGORY_COLORS[selectedNotif?.category || 'System'] || colors.accent }]}>{selectedNotif?.category.toUpperCase()}</Text>
               </View>
               <TouchableOpacity onPress={() => setSelectedNotif(null)} style={ts.closeBtn}>
                 <Ionicons name="close" size={24} color={colors.text} />
               </TouchableOpacity>
             </View>
-
             <View style={ts.modalBody}>
               <View style={ts.modalIconBox}>
-                <Ionicons name={selectedNotif?.icon} size={48} color={colors.accent} />
+                <Ionicons name={(selectedNotif?.icon || 'notifications-outline') as any} size={48} color={colors.accent} />
               </View>
               <Text style={ts.modalTitle}>{selectedNotif?.title}</Text>
-              <Text style={ts.modalTime}>{selectedNotif?.time}</Text>
+              <Text style={ts.modalTime}>{selectedNotif ? formatTime(selectedNotif.created_at) : ''}</Text>
               <Text style={ts.modalMessage}>{selectedNotif?.message}</Text>
             </View>
-
             <View style={ts.modalActions}>
-              <TouchableOpacity style={ts.deleteBtn} onPress={() => deleteNotif(selectedNotif?.id)}>
+              <TouchableOpacity style={ts.deleteBtn} onPress={() => selectedNotif && deleteNotif(selectedNotif.id)}>
                 <Ionicons name="trash-outline" size={20} color={colors.error} />
                 <Text style={ts.deleteText}>Delete Alert</Text>
               </TouchableOpacity>
@@ -195,11 +185,12 @@ export default function NotificationsScreen({ navigation }: any) {
 
 const ts = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.lg, paddingVertical: spacing.md, marginBottom: spacing.md },
-  headerTitle: { color: colors.text, fontSize: 24, fontWeight: '700' },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
+  backBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#111', justifyContent: 'center', alignItems: 'center' },
+  headerTitle: { color: colors.text, fontSize: 20, fontWeight: '700' },
   headerSubtitle: { color: colors.textSecondary, fontSize: 10, fontWeight: '800', letterSpacing: 1, marginTop: 4 },
   readAllBtn: { padding: 4 },
-  readAllText: { color: colors.accent, fontSize: 11, fontWeight: '700' },
+  readAllText: { color: colors.accent, fontSize: 10, fontWeight: '700' },
   filterScroll: { paddingVertical: spacing.sm },
   filterContent: { paddingHorizontal: spacing.lg, gap: 12 },
   filterPill: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: '#111', borderWidth: 1, borderColor: '#222' },
@@ -238,6 +229,3 @@ const ts = StyleSheet.create({
   dismissBtn: { backgroundColor: colors.accent, padding: 16, borderRadius: 28, alignItems: 'center' },
   dismissText: { color: '#000', fontSize: 15, fontWeight: '800' },
 });
-
-export default NotificationsScreen;
-

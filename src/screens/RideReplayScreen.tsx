@@ -1,12 +1,21 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, SafeAreaView, StyleSheet, ScrollView, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, SafeAreaView, StyleSheet, ScrollView, Platform } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '../navigation/types';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
 
 interface Coord { lat: number; lng: number; }
-interface Props { route: { params: { ride: any } }; navigation: any; }
+type Props = NativeStackScreenProps<RootStackParamList, 'RideReplay'>;
 
 const W = 480, H = 640;
+
+// Raw DOM style object for the <canvas> element (RN StyleSheet doesn't accept web-only CSS values)
+const canvasStyle: React.CSSProperties = {
+  width: '100%',
+  aspectRatio: `${W} / ${H}`,
+  display: 'block',
+};
 
 export default function RideReplayScreen({ route, navigation }: Props) {
   const { ride } = route.params;
@@ -228,7 +237,7 @@ export default function RideReplayScreen({ route, navigation }: Props) {
               <Text style={ts.recText}>REC</Text>
             </View>
           )}
-          <canvas ref={canvasRef} width={W} height={H} style={ts.canvas} />
+          <canvas ref={canvasRef} width={W} height={H} style={canvasStyle} />
           
           <View style={ts.progressTrack}>
             <View style={[ts.progressBar, { width: `${progress * 100}%` }]} />
@@ -294,7 +303,6 @@ const ts = StyleSheet.create({
   rideTitle: { color: colors.text, fontSize: fontSize.md, fontWeight: '700' },
   rideSubtitle: { color: colors.textSecondary, fontSize: fontSize.xs, marginTop: 2 },
   canvasWrapper: { borderRadius: borderRadius.xl, overflow: 'hidden', borderWidth: 1, borderColor: '#222', backgroundColor: '#000' },
-  canvas: { width: '100%', aspectRatio: W/H, display: 'block' },
   recBadge: { position: 'absolute', top: 16, right: 16, zIndex: 10, flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.8)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
   recDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#FF4444', marginRight: 8 },
   recText: { color: '#fff', fontSize: 10, fontWeight: '800', letterSpacing: 1 },
