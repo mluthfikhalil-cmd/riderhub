@@ -39,11 +39,11 @@ DELETE FROM parts WHERE id IN (SELECT id FROM ranked WHERE rn > 1);
 -- 6. Ensure UNIQUE title on parts (safe after dedup)
 CREATE UNIQUE INDEX IF NOT EXISTS parts_title_idx ON parts(title);
 
--- 7. Optional: wipe legacy placeholder parts from earlier test data
---    Only removes rows with obvious placeholder markers (keeps real listings).
---    Uncomment to apply:
--- DELETE FROM parts
--- WHERE title LIKE '%#_' OR title LIKE '%Original #%' OR title LIKE '%New Model #%';
+-- 7. Optional: wipe legacy placeholder parts from earlier test data.
+--    UNCOMMENT next 2 lines to clear all old parts and re-seed from data.sql
+--    (useful if you seeded before the curated Shopee list was added):
+-- DELETE FROM parts;
+-- (after DELETE, run sql/data.sql to populate with the 32 curated products)
 
 -- 8. Verify counts
 DO $$

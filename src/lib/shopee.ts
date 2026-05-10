@@ -1,16 +1,16 @@
 // Shopee affiliate link builders.
 // Affiliate ID: 11319481705 (mluthfikhalil)
 //
-// Shopee supports 3 link formats we care about:
-//  1. Product deeplink:  https://shopee.co.id/<slug>-i.<shop_id>.<item_id>?af_id=<affiliate_id>
-//  2. Search deeplink:   https://shopee.co.id/search?keyword=<query>&af_id=<affiliate_id>
-//  3. Short link:        https://s.shopee.co.id/<code>  (pre-generated from affiliate dashboard)
+// Priority chain when resolving Shopee URL for a part:
+//  1. affiliate_url (admin override — pre-generated short link or deeplink)
+//  2. Product deeplink if shopee_product_id + shopee_shop_id set
+//  3. Search by title with sortBy=sales (best-seller first) — always works
 //
-// When a part has a `shopee_product_id` + `shopee_shop_id`, prefer (1).
-// Otherwise fall back to search by keyword using the part title.
-// `affiliate_url` column on `parts` lets admins override with a pre-generated short link.
+// All outbound links get af_id=<affiliate> + utm_source=riderhub appended,
+// except short links (s.shopee.co.id) which already bake the tracking in.
 
 export const SHOPEE_AFFILIATE_ID = '11319481705';
+export const SHOPEE_UTM_SOURCE = 'riderhub';
 
 interface PartAffiliateInput {
   title: string;
@@ -29,20 +29,26 @@ const slugify = (s: string): string =>
     .slice(0, 80);
 
 const appendAffiliate = (url: string): string => {
-  const separator = url.includes('?') ? '&' : '?';
-  return `${url}${separator}af_id=${SHOPEE_AFFILIATE_ID}&utm_source=riderhub`;
+  // Parse existing query string so we don't duplicate params
+  const hasQuery = url.includes('?');
+  const separator = hasQuery ? '&' : '?';
+  const params = new URLSearchParams();
+  params.set('af_id', SHOPEE_AFFILIATE_ID);
+  params.set('utm_source', SHOPEE_UTM_SOURCE);
+  // sub_id helps track conversion by product in affiliate dashboard
+  return `${url}${separator}${params.toString()}`;
 };
 
 export const buildShopeeUrl = (part: PartAffiliateInput): string => {
-  // 1. Admin-provided affiliate_url wins (typically a short link)
+  // 1. Admin-provided affiliate_url wins
   if (part.affiliate_url && part.affiliate_url.trim()) {
     const url = part.affiliate_url.trim();
-    // Short links (s.shopee.co.id) already track — don't append params
+    // Pre-generated short links already carry tracking
     if (url.includes('s.shopee.co.id')) return url;
     return appendAffiliate(url);
   }
 
-  // 2. Product deeplink if IDs available
+  // 2. Product deeplink if we have the IDs
   if (part.shopee_product_id && part.shopee_shop_id) {
     const slug = slugify(part.title);
     return appendAffiliate(
@@ -50,7 +56,9 @@ export const buildShopeeUrl = (part: PartAffiliateInput): string => {
     );
   }
 
-  // 3. Fall back to search — always works
+  // 3. Search fallback — sortBy=sales pushes the top seller to #1
   const keyword = encodeURIComponent(part.title);
-  return appendAffiliate(`https://shopee.co.id/search?keyword=${keyword}`);
+  return appendAffiliate(
+    `https://shopee.co.id/search?keyword=${keyword}&sortBy=sales`,
+  );
 };
