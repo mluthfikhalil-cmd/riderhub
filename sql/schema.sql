@@ -177,6 +177,8 @@ CREATE TABLE IF NOT EXISTS segments (
   end_lng DOUBLE PRECISION NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+-- Unique name prevents seed duplicates on re-run
+CREATE UNIQUE INDEX IF NOT EXISTS segments_name_idx ON segments(name);
 
 -- segment_efforts --------------------------------------------
 CREATE TABLE IF NOT EXISTS segment_efforts (
@@ -410,6 +412,7 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- Seed: Palembang segments -----------------------------------
+-- ON CONFLICT(name) prevents duplicates thanks to segments_name_idx.
 INSERT INTO segments (name, city, distance_km, start_lat, start_lng, end_lat, end_lng)
 VALUES
   ('Jembatan Ampera Sprint', 'Palembang', 1.20, -2.9923, 104.7636, -2.9988, 104.7675),
@@ -420,4 +423,4 @@ VALUES
   ('Prabumulih Highway',     'Palembang', 45.0, -3.1900, 104.6300, -3.4330, 104.2360),
   ('Kayu Agung Loop',        'Palembang', 18.0, -3.3930, 104.8260, -3.3100, 104.7200),
   ('Sriwijaya Route',        'Palembang', 4.60, -2.9900, 104.7550, -2.9850, 104.7680)
-ON CONFLICT DO NOTHING;
+ON CONFLICT (name) DO NOTHING;
