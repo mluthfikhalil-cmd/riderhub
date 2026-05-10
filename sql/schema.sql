@@ -35,7 +35,8 @@ CREATE TABLE IF NOT EXISTS bikes (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS bikes_user_idx ON bikes(user_id);
-CREATE UNIQUE INDEX IF NOT EXISTS bikes_user_primary_idx ON bikes(user_id) WHERE is_primary = TRUE;
+-- Note: unique index for primary-per-user is created below (after ALTERs
+-- ensure all required columns exist and after any stale primaries are reset).
 
 -- events -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS events (
@@ -244,6 +245,59 @@ CREATE TABLE IF NOT EXISTS notifications (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS notif_user_idx ON notifications(user_id);
+
+-- Backfill columns for pre-existing installs -----------------
+-- CREATE TABLE IF NOT EXISTS is idempotent on table existence but NOT on columns;
+-- these ALTER statements ensure columns are present before any policy references them.
+ALTER TABLE profiles  ADD COLUMN IF NOT EXISTS name TEXT;
+ALTER TABLE profiles  ADD COLUMN IF NOT EXISTS bio TEXT;
+ALTER TABLE profiles  ADD COLUMN IF NOT EXISTS motor_brand TEXT;
+ALTER TABLE profiles  ADD COLUMN IF NOT EXISTS motor_model TEXT;
+ALTER TABLE profiles  ADD COLUMN IF NOT EXISTS motor_plate TEXT;
+ALTER TABLE profiles  ADD COLUMN IF NOT EXISTS onboarded BOOLEAN DEFAULT FALSE;
+ALTER TABLE profiles  ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT FALSE;
+ALTER TABLE profiles  ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+
+ALTER TABLE bikes     ADD COLUMN IF NOT EXISTS odometer_km INTEGER DEFAULT 0;
+ALTER TABLE bikes     ADD COLUMN IF NOT EXISTS oil_change_km INTEGER DEFAULT 0;
+ALTER TABLE bikes     ADD COLUMN IF NOT EXISTS last_service_date DATE;
+
+ALTER TABLE events    ADD COLUMN IF NOT EXISTS contact TEXT;
+ALTER TABLE events    ADD COLUMN IF NOT EXISTS organizer_id UUID REFERENCES auth.users(id) ON DELETE SET NULL;
+ALTER TABLE events    ADD COLUMN IF NOT EXISTS location TEXT;
+
+ALTER TABLE parts     ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT TRUE;
+ALTER TABLE parts     ADD COLUMN IF NOT EXISTS image_url TEXT;
+ALTER TABLE parts     ADD COLUMN IF NOT EXISTS affiliate_url TEXT;
+ALTER TABLE parts     ADD COLUMN IF NOT EXISTS rating NUMERIC(3,1) DEFAULT 4.8;
+ALTER TABLE parts     ADD COLUMN IF NOT EXISTS sold INTEGER DEFAULT 0;
+ALTER TABLE parts     ADD COLUMN IF NOT EXISTS badge TEXT;
+
+ALTER TABLE posts     ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE;
+ALTER TABLE posts     ADD COLUMN IF NOT EXISTS image_url TEXT;
+
+ALTER TABLE comments  ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL;
+
+ALTER TABLE groups    ADD COLUMN IF NOT EXISTS organizer_id UUID REFERENCES auth.users(id) ON DELETE SET NULL;
+ALTER TABLE groups    ADD COLUMN IF NOT EXISTS organizer_name TEXT;
+ALTER TABLE groups    ADD COLUMN IF NOT EXISTS member_count INTEGER DEFAULT 1;
+
+-- Ensure default values exist for active parts rows (in case the column
+-- was just added and rows were created with NULL via older schemas)
+UPDATE parts SET active = TRUE WHERE active IS NULL;
+
+-- Deduplicate multiple primary bikes per user (artifact of earlier buggy
+-- upsert). Must run before the partial unique index is created.
+WITH ranked AS (
+  SELECT id, ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY created_at DESC) AS rn
+  FROM bikes WHERE is_primary = TRUE
+)
+UPDATE bikes SET is_primary = FALSE
+WHERE id IN (SELECT id FROM ranked WHERE rn > 1);
+
+-- Partial unique index: at most one primary bike per user.
+CREATE UNIQUE INDEX IF NOT EXISTS bikes_user_primary_idx
+  ON bikes(user_id) WHERE is_primary = TRUE;
 
 -- Row Level Security ----------------------------------------
 ALTER TABLE profiles         ENABLE ROW LEVEL SECURITY;
