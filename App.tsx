@@ -34,7 +34,7 @@ import {
 } from './src/screens';
 
 // RiderHub build version - tied to git commit at build time if available
-const BUILD_VERSION = process.env.EXPO_PUBLIC_BUILD_VERSION || 'recovery-dev';
+const BUILD_VERSION = process.env.EXPO_PUBLIC_BUILD_VERSION || 'recovery-v2';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
