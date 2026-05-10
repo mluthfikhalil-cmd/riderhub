@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, TextInput, Modal, ActivityIndicator, Platform } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { TeslaCard } from '../components/TeslaCard';
+import { BackButton, CloseButton } from '../components/HeaderButtons';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
 import { supabase } from '../lib/supabase';
 
@@ -140,9 +141,7 @@ const AdminScreen = ({ navigation }: any) => {
   return (
     <SafeAreaView style={ts.container}>
       <View style={ts.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={ts.iconBtn}>
-          <Ionicons name="chevron-back" size={24} color={colors.text} />
-        </TouchableOpacity>
+        <BackButton onPress={() => navigation.goBack()} />
         <View style={{ flex: 1, marginLeft: 16 }}>
           <Text style={ts.headerTitle}>Admin Panel</Text>
           <Text style={ts.headerSubtitle}>System Management</Text>
@@ -282,9 +281,7 @@ const AdminScreen = ({ navigation }: any) => {
           <View style={ts.modalContent}>
             <View style={ts.modalHeader}>
               <Text style={ts.modalTitle}>Modify {editType === 'event' ? 'Event' : 'Part'}</Text>
-              <TouchableOpacity onPress={() => setEditModal(null)}>
-                <Ionicons name="close" size={24} color={colors.text} />
-              </TouchableOpacity>
+              <CloseButton onPress={() => setEditModal(null)} />
             </View>
 
             {editModal && (

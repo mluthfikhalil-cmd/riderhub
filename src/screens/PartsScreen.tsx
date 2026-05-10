@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, TextInput, Modal, Platform, Image, Linking, Dimensions } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { TeslaCard } from '../components/TeslaCard';
+import { CloseButton } from '../components/HeaderButtons';
+import { buildShopeeUrl } from '../lib/shopee';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
 import { supabase } from '../lib/supabase';
 
@@ -54,9 +56,9 @@ const PartsScreen = ({ navigation }: any) => {
   };
 
   const handleBuy = (part: any) => {
-    const url = part.affiliate_url || part.link || `https://wa.me/6281234567890?text=Halo, saya tertarik dengan ${part.title}`;
+    const url = buildShopeeUrl(part);
     if (Platform.OS === 'web') window.open(url, '_blank');
-    else Linking.openURL(url);
+    else Linking.openURL(url).catch(() => undefined);
   };
 
   const filteredParts = dbParts.filter(p => {
@@ -148,9 +150,7 @@ const PartsScreen = ({ navigation }: any) => {
         <View style={ts.modalOverlay}>
           <View style={ts.modalContent}>
             <View style={ts.modalHeader}>
-              <TouchableOpacity onPress={() => setSelectedPart(null)} style={ts.modalClose}>
-                <Ionicons name="close" size={24} color={colors.text} />
-              </TouchableOpacity>
+              <CloseButton onPress={() => setSelectedPart(null)} />
             </View>
             {selectedPart && (
               <ScrollView showsVerticalScrollIndicator={false}>
@@ -186,7 +186,8 @@ const PartsScreen = ({ navigation }: any) => {
                     <Ionicons name={cartIds.includes(selectedPart.id) ? "checkmark" : "cart"} size={20} color={cartIds.includes(selectedPart.id) ? "#000" : colors.text} />
                   </TouchableOpacity>
                   <TouchableOpacity style={ts.buyBtn} onPress={() => handleBuy(selectedPart)}>
-                    <Text style={ts.buyBtnText}>BUY NOW</Text>
+                    <MaterialCommunityIcons name="storefront" size={18} color={colors.background} style={{ marginRight: 8 }} />
+                    <Text style={ts.buyBtnText}>BELI DI SHOPEE</Text>
                   </TouchableOpacity>
                 </View>
               </ScrollView>
@@ -254,7 +255,7 @@ const ts = StyleSheet.create({
   modalActions: { flexDirection: 'row', gap: 12, marginBottom: 40 },
   cartAction: { width: 60, height: 60, borderRadius: 30, backgroundColor: '#111', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#222' },
   cartActionActive: { backgroundColor: colors.accent, borderColor: colors.accent },
-  buyBtn: { flex: 1, height: 60, borderRadius: 30, backgroundColor: colors.text, justifyContent: 'center', alignItems: 'center' },
+  buyBtn: { flex: 1, height: 60, borderRadius: 30, backgroundColor: colors.text, justifyContent: 'center', alignItems: 'center', flexDirection: 'row' },
   buyBtnText: { color: colors.background, fontSize: 15, fontWeight: '800', letterSpacing: 1 }
 });
 

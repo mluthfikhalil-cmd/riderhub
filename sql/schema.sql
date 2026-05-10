@@ -72,6 +72,8 @@ CREATE TABLE IF NOT EXISTS parts (
   image_url TEXT,
   image_emoji TEXT DEFAULT '🔧',
   affiliate_url TEXT,
+  shopee_product_id TEXT,
+  shopee_shop_id TEXT,
   rating NUMERIC(3,1) DEFAULT 4.8,
   sold INTEGER DEFAULT 0,
   badge TEXT,
@@ -274,6 +276,12 @@ ALTER TABLE parts     ADD COLUMN IF NOT EXISTS affiliate_url TEXT;
 ALTER TABLE parts     ADD COLUMN IF NOT EXISTS rating NUMERIC(3,1) DEFAULT 4.8;
 ALTER TABLE parts     ADD COLUMN IF NOT EXISTS sold INTEGER DEFAULT 0;
 ALTER TABLE parts     ADD COLUMN IF NOT EXISTS badge TEXT;
+ALTER TABLE parts     ADD COLUMN IF NOT EXISTS shopee_product_id TEXT;
+ALTER TABLE parts     ADD COLUMN IF NOT EXISTS shopee_shop_id TEXT;
+
+-- Unique title on parts prevents seed duplicates on re-run (and rejects
+-- admin from accidentally listing two identical products)
+CREATE UNIQUE INDEX IF NOT EXISTS parts_title_idx ON parts(title);
 
 ALTER TABLE posts     ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE;
 ALTER TABLE posts     ADD COLUMN IF NOT EXISTS image_url TEXT;

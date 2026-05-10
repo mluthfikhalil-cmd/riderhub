@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { ACHIEVEMENTS, buildStats, fetchUserAchievements, getTierColor } from '../utils/achievements';
 import { TeslaCard } from '../components/TeslaCard';
+import { BackButton } from '../components/HeaderButtons';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
 
 const TIER_LABELS: Record<string, string> = { bronze:'BRONZE', silver:'SILVER', gold:'GOLD', platinum:'PLATINUM' };
@@ -48,9 +49,7 @@ export default function AchievementScreen({ navigation }: any) {
   return (
     <SafeAreaView style={ts.container}>
       <View style={ts.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={ts.iconBtn}>
-          <Ionicons name="chevron-back" size={24} color={colors.text} />
-        </TouchableOpacity>
+        <BackButton onPress={() => navigation.goBack()} />
         <View style={{ flex: 1, marginLeft: 16 }}>
           <Text style={ts.headerTitle}>Achievements</Text>
           <Text style={ts.headerSubtitle}>Badge Collection</Text>

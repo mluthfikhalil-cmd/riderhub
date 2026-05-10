@@ -4,6 +4,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { TeslaCard } from '../components/TeslaCard';
+import { BackButton, CloseButton, CreateButton } from '../components/HeaderButtons';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
 
 const CATS = ['SEMUA', 'SUNMORI', 'NIGHTRIDE', 'TOURING', 'RACING MEET', 'GRUP'];
@@ -132,9 +133,10 @@ export default function EventsScreen({ navigation }: any) {
           <Text style={ts.headerSubtitle}>Events & Community Groups</Text>
         </View>
         <View style={ts.headerActions}>
-          <TouchableOpacity style={ts.actionBtn} onPress={() => { setCreateModal(tab === 'GRUP' ? 'group' : 'event'); setSubmitMsg(''); }}>
-            <Ionicons name="add" size={24} color={colors.text} />
-          </TouchableOpacity>
+          <CreateButton
+            onPress={() => { setCreateModal(tab === 'GRUP' ? 'group' : 'event'); setSubmitMsg(''); }}
+            label={tab === 'GRUP' ? 'Buat grup' : 'Buat event'}
+          />
         </View>
       </View>
 
@@ -247,9 +249,7 @@ export default function EventsScreen({ navigation }: any) {
           <View style={ts.modalContent}>
             <View style={ts.modalHeader}>
               <Text style={ts.modalTitle}>Buat Event Baru</Text>
-              <TouchableOpacity onPress={() => setCreateModal(null)}>
-                <Ionicons name="close" size={24} color={colors.text} />
-              </TouchableOpacity>
+              <CloseButton onPress={() => setCreateModal(null)} />
             </View>
 
             <ScrollView style={ts.modalScroll}>
@@ -284,9 +284,7 @@ export default function EventsScreen({ navigation }: any) {
           <View style={ts.modalContent}>
             <View style={ts.modalHeader}>
               <Text style={ts.modalTitle}>Buat Grup Baru</Text>
-              <TouchableOpacity onPress={() => setCreateModal(null)}>
-                <Ionicons name="close" size={24} color={colors.text} />
-              </TouchableOpacity>
+              <CloseButton onPress={() => setCreateModal(null)} />
             </View>
             <ScrollView style={ts.modalScroll}>
               <Field label="NAMA GRUP" value={gName} onChangeText={setGName} placeholder="Palembang Riders..." />

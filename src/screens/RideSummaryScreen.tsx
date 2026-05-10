@@ -5,6 +5,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
 import { ACHIEVEMENTS, getTierColor } from '../utils/achievements';
 import { parseKm } from '../lib/geo';
+import { CloseButton, HeaderIconButton } from '../components/HeaderButtons';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'RideSummary'>;
@@ -37,13 +38,9 @@ export default function RideSummaryScreen({ route, navigation }: Props) {
   return (
     <SafeAreaView style={ts.container}>
       <View style={ts.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={ts.iconBtn}>
-          <Ionicons name="close" size={24} color={colors.text} />
-        </TouchableOpacity>
+        <CloseButton onPress={() => navigation.goBack()} />
         <Text style={ts.headerTitle}>Ride Summary</Text>
-        <TouchableOpacity onPress={shareRide} style={ts.iconBtn}>
-          <Ionicons name="share-outline" size={22} color={colors.accent} />
-        </TouchableOpacity>
+        <HeaderIconButton icon="share-outline" color={colors.accent} onPress={shareRide} label="Share" />
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={ts.scrollPadding}>

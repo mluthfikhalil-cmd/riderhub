@@ -5,6 +5,7 @@ import { colors, spacing, fontSize, borderRadius } from '../theme';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { TeslaCard } from '../components/TeslaCard';
+import { BackButton } from '../components/HeaderButtons';
 
 const InsuranceScreen = ({ navigation }: any) => {
   const { user } = useAuth();
@@ -52,14 +53,12 @@ const InsuranceScreen = ({ navigation }: any) => {
   return (
     <SafeAreaView style={ts.container}>
       <View style={ts.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={ts.backBtn}>
-          <Ionicons name="chevron-back" size={24} color={colors.text} />
-        </TouchableOpacity>
+        <BackButton onPress={() => navigation.goBack()} />
         <View style={ts.titleBox}>
           <Text style={ts.title}>Security & Docs</Text>
           <Text style={ts.subtitle}>INSURANCE · COMPLIANCE · SAFETY</Text>
         </View>
-        <View style={{ width: 44 }} />
+        <View style={{ width: 40 }} />
       </View>
 
       <ScrollView style={ts.scrollView} showsVerticalScrollIndicator={false} contentContainerStyle={ts.scrollPadding}>

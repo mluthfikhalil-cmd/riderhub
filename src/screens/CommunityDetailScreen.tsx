@@ -5,6 +5,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { TeslaCard } from '../components/TeslaCard';
+import { BackButton, CloseButton } from '../components/HeaderButtons';
 import type { RootStackParamList } from '../navigation/types';
 import { colors, spacing, borderRadius } from '../theme';
 
@@ -98,11 +99,9 @@ export default function CommunityDetailScreen({ route, navigation }: Props) {
   return (
     <SafeAreaView style={ts.container}>
       <View style={ts.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={ts.backBtn}>
-          <Ionicons name="chevron-back" size={24} color={colors.text} />
-        </TouchableOpacity>
+        <BackButton onPress={() => navigation.goBack()} />
         <Text style={ts.headerTitle}>Collective</Text>
-        <View style={{ width: 44 }} />
+        <View style={{ width: 40 }} />
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={ts.scrollPadding}>
@@ -183,9 +182,7 @@ export default function CommunityDetailScreen({ route, navigation }: Props) {
           <View style={ts.modalContent}>
             <View style={ts.modalHeader}>
               <Text style={ts.modalTitle}>New Topic</Text>
-              <TouchableOpacity onPress={() => setShowPostModal(false)}>
-                <Ionicons name="close" size={24} color={colors.text} />
-              </TouchableOpacity>
+              <CloseButton onPress={() => setShowPostModal(false)} />
             </View>
             <TextInput
               style={ts.input}

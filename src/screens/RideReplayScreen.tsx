@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, SafeAreaView, StyleSheet, ScrollView, Pla
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
+import { BackButton } from '../components/HeaderButtons';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
 
 interface Coord { lat: number; lng: number; }
@@ -210,9 +211,7 @@ export default function RideReplayScreen({ route, navigation }: Props) {
   return (
     <SafeAreaView style={ts.container}>
       <View style={ts.header}>
-        <TouchableOpacity onPress={() => { stopAnim(); navigation.goBack(); }} style={ts.iconBtn}>
-          <Ionicons name="chevron-back" size={24} color={colors.text} />
-        </TouchableOpacity>
+        <BackButton onPress={() => { stopAnim(); navigation.goBack(); }} />
         <View style={{ flex: 1, marginLeft: 16 }}>
           <Text style={ts.headerTitle}>Relive</Text>
           <Text style={ts.headerSubtitle}>Video route replay</Text>

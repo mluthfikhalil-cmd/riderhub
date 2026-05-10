@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Tex
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { TeslaCard } from '../components/TeslaCard';
+import { CloseButton } from '../components/HeaderButtons';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
 
 const MARQUEE_ITEMS = [
@@ -183,9 +184,7 @@ export default function LandingScreen() {
           <View style={ts.modalContent}>
             <View style={ts.modalHeader}>
               <Text style={ts.modalTitle}>{modal === 'login' ? 'Welcome Back' : 'Create Account'}</Text>
-              <TouchableOpacity onPress={() => setModal(null)}>
-                <Ionicons name="close" size={24} color={colors.text} />
-              </TouchableOpacity>
+              <CloseButton onPress={() => setModal(null)} />
             </View>
 
             {modal === 'register' && (

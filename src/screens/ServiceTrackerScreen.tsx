@@ -4,6 +4,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
+import { BackButton, CloseButton } from '../components/HeaderButtons';
 import type { RootStackParamList } from '../navigation/types';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
 
@@ -128,9 +129,7 @@ export default function ServiceTrackerScreen({ navigation }: Props) {
   return (
     <SafeAreaView style={ts.container}>
       <View style={ts.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={ts.iconBtn}>
-          <Ionicons name="chevron-back" size={24} color={colors.text} />
-        </TouchableOpacity>
+        <BackButton onPress={() => navigation.goBack()} />
         <View style={{ flex: 1, marginLeft: 16 }}>
           <Text style={ts.headerTitle}>Service Tracker</Text>
           <Text style={ts.headerSubtitle}>Maintenance & Perawatan</Text>
@@ -192,9 +191,7 @@ export default function ServiceTrackerScreen({ navigation }: Props) {
           <View style={ts.modalContent}>
             <View style={ts.modalHeader}>
               <Text style={ts.modalTitle}>Record {modal?.label}</Text>
-              <TouchableOpacity onPress={() => setModal(null)}>
-                <Ionicons name="close" size={24} color={colors.text} />
-              </TouchableOpacity>
+              <CloseButton onPress={() => setModal(null)} />
             </View>
 
             <Text style={ts.inputLabel}>ODOMETER SAAT INI (km)</Text>

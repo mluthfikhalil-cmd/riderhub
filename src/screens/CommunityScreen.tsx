@@ -7,6 +7,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { TeslaCard } from '../components/TeslaCard';
+import { CloseButton, CreateButton } from '../components/HeaderButtons';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
 
 // ── Upload to Supabase Storage ──────────────────────────────
@@ -221,9 +222,11 @@ export default function CommunityScreen({ navigation }: any) {
           <Text style={ts.headerTitle}>Discovery</Text>
           <Text style={ts.headerSubtitle}>Community Feed & Stories</Text>
         </View>
-        <TouchableOpacity style={ts.headerAction} onPress={() => { setCreateModal(true); setUploadProgress(''); }}>
-          <Ionicons name="create-outline" size={24} color={colors.text} />
-        </TouchableOpacity>
+        <CreateButton
+          icon="create-outline"
+          onPress={() => { setCreateModal(true); setUploadProgress(''); }}
+          label="Buat post"
+        />
       </View>
 
       <ScrollView
@@ -300,9 +303,7 @@ export default function CommunityScreen({ navigation }: any) {
           <View style={ts.modalContent}>
             <View style={ts.modalHeader}>
               <Text style={ts.modalTitle}>New Post</Text>
-              <TouchableOpacity onPress={() => { setCreateModal(false); removePhoto(); setPostText(''); }}>
-                <Ionicons name="close" size={24} color={colors.text} />
-              </TouchableOpacity>
+              <CloseButton onPress={() => { setCreateModal(false); removePhoto(); setPostText(''); }} />
             </View>
 
             <TextInput
@@ -348,9 +349,7 @@ export default function CommunityScreen({ navigation }: any) {
           <View style={[ts.modalContent, { height: '80%' }]}>
             <View style={ts.modalHeader}>
               <Text style={ts.modalTitle}>Comments</Text>
-              <TouchableOpacity onPress={() => setCommentPost(null)}>
-                <Ionicons name="close" size={24} color={colors.text} />
-              </TouchableOpacity>
+              <CloseButton onPress={() => setCommentPost(null)} />
             </View>
 
             <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>

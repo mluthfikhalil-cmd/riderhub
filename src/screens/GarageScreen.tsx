@@ -5,6 +5,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { TeslaCard } from '../components/TeslaCard';
+import { BackButton, CloseButton, CreateButton } from '../components/HeaderButtons';
 import type { Bike } from '../types';
 import type { RootStackParamList } from '../navigation/types';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
@@ -110,16 +111,12 @@ export default function GarageScreen({ navigation }: Props) {
   return (
     <SafeAreaView style={ts.container}>
       <View style={ts.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={ts.iconBtn}>
-          <Ionicons name="chevron-back" size={24} color={colors.text} />
-        </TouchableOpacity>
+        <BackButton onPress={() => navigation.goBack()} />
         <View style={{ flex: 1, marginLeft: 16 }}>
           <Text style={ts.headerTitle}>Garage</Text>
           <Text style={ts.headerSubtitle}>Manage your vehicles</Text>
         </View>
-        <TouchableOpacity onPress={() => setIsModalVisible(true)} style={ts.addBtn}>
-          <Ionicons name="add" size={24} color="#000" />
-        </TouchableOpacity>
+        <CreateButton onPress={() => setIsModalVisible(true)} label="Tambah motor" />
       </View>
 
       <ScrollView style={ts.scrollView} showsVerticalScrollIndicator={false} contentContainerStyle={ts.scrollPadding}>
@@ -188,9 +185,7 @@ export default function GarageScreen({ navigation }: Props) {
           <View style={ts.modalContent}>
             <View style={ts.modalHeader}>
               <Text style={ts.modalTitle}>Add Vehicle</Text>
-              <TouchableOpacity onPress={() => { setIsModalVisible(false); resetForm(); }}>
-                <Ionicons name="close" size={24} color={colors.text} />
-              </TouchableOpacity>
+              <CloseButton onPress={() => { setIsModalVisible(false); resetForm(); }} />
             </View>
 
             <View style={ts.form}>

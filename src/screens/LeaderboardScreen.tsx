@@ -4,6 +4,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { TeslaCard } from '../components/TeslaCard';
+import { CloseButton } from '../components/HeaderButtons';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
 
 const RANK_COLORS = [colors.accent, '#C0C0C0', '#CD7F32'];
@@ -254,9 +255,7 @@ export default function LeaderboardScreen({ navigation }: any) {
                 <Text style={ts.modalTitle}>{selectedSeg?.name}</Text>
                 <Text style={ts.modalSubtitle}>{selectedSeg?.city} • {selectedSeg?.distance_km} KM</Text>
               </View>
-              <TouchableOpacity onPress={() => setSelectedSeg(null)}>
-                <Ionicons name="close" size={24} color={colors.text} />
-              </TouchableOpacity>
+              <CloseButton onPress={() => setSelectedSeg(null)} />
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>

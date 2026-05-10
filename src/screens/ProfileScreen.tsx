@@ -4,6 +4,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { TeslaCard } from '../components/TeslaCard';
+import { CloseButton } from '../components/HeaderButtons';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
 import { buildStats, ACHIEVEMENTS, fetchUserAchievements, getTierColor } from '../utils/achievements';
 
@@ -172,9 +173,7 @@ export default function ProfileScreen({ navigation }: any) {
           <View style={ts.modalContent}>
             <View style={ts.modalHeader}>
               <Text style={ts.modalTitle}>Edit Profile</Text>
-              <TouchableOpacity onPress={() => setEditModal(false)}>
-                <Ionicons name="close" size={24} color={colors.text} />
-              </TouchableOpacity>
+              <CloseButton onPress={() => setEditModal(false)} />
             </View>
 
             <View style={ts.fieldContainer}>

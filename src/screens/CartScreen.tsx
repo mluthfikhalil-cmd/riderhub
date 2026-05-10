@@ -4,6 +4,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { supabase } from '../lib/supabase';
 import { TeslaCard } from '../components/TeslaCard';
+import { BackButton } from '../components/HeaderButtons';
 import type { RootStackParamList } from '../navigation/types';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
 
@@ -86,9 +87,7 @@ export default function CartScreen({ navigation }: Props) {
   return (
     <SafeAreaView style={ts.container}>
       <View style={ts.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={ts.backBtn}>
-          <Ionicons name="chevron-back" size={24} color={colors.text} />
-        </TouchableOpacity>
+        <BackButton onPress={() => navigation.goBack()} />
         <View style={{ flex: 1 }}>
           <Text style={ts.headerTitle}>Inventory</Text>
           <Text style={ts.headerSubtitle}>SHOPPING CART</Text>

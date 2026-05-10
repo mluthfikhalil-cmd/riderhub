@@ -5,6 +5,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { TeslaCard } from '../components/TeslaCard';
+import { BackButton, CloseButton } from '../components/HeaderButtons';
 import type { RootStackParamList } from '../navigation/types';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
 
@@ -91,9 +92,7 @@ export default function NotificationsScreen({ navigation }: Props) {
   return (
     <SafeAreaView style={ts.container}>
       <View style={ts.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={ts.backBtn}>
-          <Ionicons name="chevron-back" size={24} color={colors.text} />
-        </TouchableOpacity>
+        <BackButton onPress={() => navigation.goBack()} />
         <View style={{ flex: 1, marginLeft: 16 }}>
           <Text style={ts.headerTitle}>Notifications</Text>
           <Text style={ts.headerSubtitle}>{unreadCount} UNREAD ALERTS</Text>
@@ -155,9 +154,7 @@ export default function NotificationsScreen({ navigation }: Props) {
               <View style={[ts.modalTag, { backgroundColor: (CATEGORY_COLORS[selectedNotif?.category || 'System'] || colors.accent) + '20' }]}>
                 <Text style={[ts.modalTagText, { color: CATEGORY_COLORS[selectedNotif?.category || 'System'] || colors.accent }]}>{selectedNotif?.category.toUpperCase()}</Text>
               </View>
-              <TouchableOpacity onPress={() => setSelectedNotif(null)} style={ts.closeBtn}>
-                <Ionicons name="close" size={24} color={colors.text} />
-              </TouchableOpacity>
+              <CloseButton onPress={() => setSelectedNotif(null)} />
             </View>
             <View style={ts.modalBody}>
               <View style={ts.modalIconBox}>

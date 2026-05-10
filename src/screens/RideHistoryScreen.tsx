@@ -10,6 +10,7 @@ import { haversineKm, formatDuration } from '../lib/geo';
 import type { Coord, Ride } from '../types';
 import type { RootStackParamList } from '../navigation/types';
 import { TeslaCard } from '../components/TeslaCard';
+import { BackButton, CloseButton, HeaderIconButton } from '../components/HeaderButtons';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'RideHistory'>;
@@ -441,16 +442,12 @@ export default function RideHistoryScreen({ navigation }: Props) {
   return (
     <SafeAreaView style={ts.container}>
       <View style={ts.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={ts.iconBtn}>
-          <Ionicons name="chevron-back" size={24} color={colors.text} />
-        </TouchableOpacity>
+        <BackButton onPress={() => navigation.goBack()} />
         <View style={{ flex: 1, marginLeft: 16 }}>
           <Text style={ts.headerTitle}>Ride History</Text>
           <Text style={ts.headerSubtitle}>Manage your tracks</Text>
         </View>
-        <TouchableOpacity onPress={() => navigation.navigate('Leaderboard')} style={ts.iconBtn}>
-          <Ionicons name="trophy-outline" size={20} color={colors.accent} />
-        </TouchableOpacity>
+        <HeaderIconButton icon="trophy-outline" color={colors.accent} onPress={() => navigation.navigate('Leaderboard')} label="Leaderboard" />
       </View>
 
       {tracking && (
@@ -629,9 +626,7 @@ export default function RideHistoryScreen({ navigation }: Props) {
                 <Text style={ts.modalTitle}>{mapModal?.ride.title}</Text>
                 <Text style={ts.modalSubtitle}>{mapModal?.ride.date}</Text>
               </View>
-              <TouchableOpacity onPress={() => setMapModal(null)}>
-                <Ionicons name="close" size={24} color={colors.text} />
-              </TouchableOpacity>
+              <CloseButton onPress={() => setMapModal(null)} />
             </View>
             <View style={{ flex: 1, borderRadius: borderRadius.lg, overflow: 'hidden', marginVertical: spacing.lg }}>
               <RouteMap coords={mapModal?.ride.route_path || []} height={400} mapKey={String(mapKey)} />
