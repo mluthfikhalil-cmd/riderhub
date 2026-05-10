@@ -9,7 +9,8 @@
     "web": "expo start --web",
     "build:web": "expo export --platform web",
     "deploy:vercel": "vercel --prod",
-    "preview": "npx serve dist"
+    "preview": "npx expo export -p web && wrangler dev",
+    "deploy": "npx expo export -p web && wrangler deploy"
   },
   "dependencies": {
     "@react-navigation/bottom-tabs": "^7.15.9",
@@ -30,7 +31,8 @@
   },
   "devDependencies": {
     "@types/react": "~19.1.0",
-    "typescript": "~5.9.2"
+    "typescript": "~5.9.2",
+    "wrangler": "^4.90.0"
   },
   "private": true
 }
