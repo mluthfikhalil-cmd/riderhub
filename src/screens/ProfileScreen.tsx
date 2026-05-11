@@ -19,6 +19,7 @@ export default function ProfileScreen({ navigation }: any) {
   const [achIds, setAchIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   // Edit state
   const [editModal, setEditModal] = useState(false);
@@ -29,14 +30,16 @@ export default function ProfileScreen({ navigation }: any) {
 
   const fetchData = useCallback(async () => {
     if (!user?.id) return;
-    const [ridesRes, bikeRes, ids] = await Promise.all([
+    const [ridesRes, bikeRes, ids, adminRes] = await Promise.all([
       supabase.from('rides').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
       supabase.from('bikes').select('*').eq('user_id', user.id).eq('is_primary', true).maybeSingle(),
       fetchUserAchievements(user.id),
+      supabase.from('profiles').select('is_admin').eq('id', user.id).maybeSingle(),
     ]);
     if (ridesRes.data) setRides(ridesRes.data);
     if (bikeRes.data) setBike(bikeRes.data);
     setAchIds(ids);
+    setIsAdmin(adminRes.data?.is_admin === true || !!user.user_metadata?.is_admin);
     setLoading(false); setRefreshing(false);
   }, [user?.id]);
 
@@ -196,6 +199,16 @@ export default function ProfileScreen({ navigation }: any) {
           />
         </View>
 
+        {isAdmin && (
+          <TouchableOpacity
+            style={ts.adminBtn}
+            onPress={() => navigation.navigate('Admin')}
+          >
+            <MaterialCommunityIcons name="shield-key-outline" size={18} color={colors.warning} />
+            <Text style={ts.adminBtnText}>ADMIN PANEL</Text>
+          </TouchableOpacity>
+        )}
+
         <TouchableOpacity style={ts.signOutBtn} onPress={handleSignOut}>
           <Text style={ts.signOutText}>SIGN OUT</Text>
         </TouchableOpacity>
@@ -270,8 +283,10 @@ const ts = StyleSheet.create({
   cardFooter: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: spacing.md, alignSelf: 'flex-end' },
   footerAction: { color: colors.accent, fontSize: fontSize.xs, fontWeight: '600' },
   menuGroup: { marginTop: spacing.lg, marginHorizontal: spacing.md, gap: spacing.sm },
-  signOutBtn: { marginHorizontal: spacing.md, marginTop: spacing.xxl, paddingVertical: 16, borderRadius: borderRadius.md, borderWidth: 1, borderColor: '#333', alignItems: 'center' },
+  signOutBtn: { marginHorizontal: spacing.md, marginTop: spacing.md, paddingVertical: 16, borderRadius: borderRadius.md, borderWidth: 1, borderColor: '#333', alignItems: 'center' },
   signOutText: { color: colors.error, fontSize: fontSize.sm, fontWeight: '700', letterSpacing: 1 },
+  adminBtn: { marginHorizontal: spacing.md, marginTop: spacing.xxl, paddingVertical: 16, borderRadius: borderRadius.md, borderWidth: 1, borderColor: 'rgba(235,176,64,0.4)', alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8, backgroundColor: 'rgba(235,176,64,0.06)' },
+  adminBtnText: { color: colors.warning, fontSize: fontSize.sm, fontWeight: '800', letterSpacing: 1 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'flex-end' },
   modalContent: { backgroundColor: colors.surface, borderTopLeftRadius: borderRadius.xl, borderTopRightRadius: borderRadius.xl, padding: spacing.lg },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xl },
