@@ -1,10 +1,14 @@
 {
-  "buildCommand": "npx expo export --platform web && node scripts/postbuild.js",
+  "buildCommand": "node scripts/build_pwa_only.js",
   "outputDirectory": "dist",
   "rewrites": [
     { "source": "/manifest.json", "destination": "/manifest.json" },
     { "source": "/sw.js", "destination": "/sw.js" },
     { "source": "/robots.txt", "destination": "/robots.txt" },
+    {
+      "source": "/models/(.*)",
+      "destination": "https://wqnpyzjixjkjygeulfvo.supabase.co/storage/v1/object/public/models/$1"
+    },
     { "source": "/(.*\\.(?:js|css|png|jpg|jpeg|svg|webp|ico|woff2?))", "destination": "/$1" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
