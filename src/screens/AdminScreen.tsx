@@ -239,12 +239,21 @@ const AdminScreen = ({ navigation }: any) => {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
-      const isAdmin = !!data.user?.user_metadata?.is_admin;
+
+      // Check admin status from profiles table (more reliable than user_metadata)
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', data.user.id)
+        .maybeSingle();
+
+      const isAdmin = profile?.is_admin === true || !!data.user?.user_metadata?.is_admin;
       if (!isAdmin) {
         await supabase.auth.signOut({ scope: 'local' });
-        setLoginError('Akun ini bukan admin.');
+        setLoginError('Akun ini bukan admin. Hubungi owner untuk akses.');
         return;
       }
+
       setIsLoggedIn(true);
     } catch (e: any) {
       setLoginError(e?.message || 'Gagal login admin.');

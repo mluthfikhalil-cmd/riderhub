@@ -1,18 +1,23 @@
--- Set admin flag for your account
--- Run in Supabase SQL Editor (Dashboard → SQL Editor)
--- Replace the email below with YOUR email address
+-- Set admin untuk akun lo (id: 86e89b49-f3b7-424f-b098-47ea32a444d4)
+-- Run di Supabase Dashboard → SQL Editor → New Query → Run
 
--- Option A: Set by profile name "lil"
-UPDATE profiles SET is_admin = TRUE WHERE name = 'lil';
+-- 1. Set is_admin di profiles table (sudah done)
+UPDATE profiles 
+SET is_admin = TRUE 
+WHERE id = '86e89b49-f3b7-424f-b098-47ea32a444d4';
 
--- Option B: Set by user ID (safer)
--- UPDATE profiles SET is_admin = TRUE WHERE id = '86e89b49-f3b7-424f-b098-47ea32a444d4';
+-- 2. Set is_admin di auth.users metadata (WAJIB — ini yang dicek AdminScreen)
+UPDATE auth.users 
+SET raw_user_meta_data = raw_user_meta_data || '{"is_admin": true}'::jsonb
+WHERE id = '86e89b49-f3b7-424f-b098-47ea32a444d4';
 
--- Also update auth metadata so the check in AdminScreen works
--- (This requires service role key — do it via Supabase Dashboard → Authentication → Users → Edit user → user_metadata)
--- Or run this if you have service role access:
--- UPDATE auth.users SET raw_user_meta_data = raw_user_meta_data || '{"is_admin": true}'::jsonb
--- WHERE id = '86e89b49-f3b7-424f-b098-47ea32a444d4';
-
--- Verify
-SELECT id, name, is_admin FROM profiles WHERE name = 'lil';
+-- 3. Verify
+SELECT 
+  u.id,
+  u.email,
+  u.raw_user_meta_data->>'is_admin' as meta_is_admin,
+  p.is_admin as profile_is_admin,
+  p.name
+FROM auth.users u
+LEFT JOIN profiles p ON p.id = u.id
+WHERE u.id = '86e89b49-f3b7-424f-b098-47ea32a444d4';
