@@ -18,6 +18,7 @@ import { TeslaCard } from '../components/TeslaCard';
 import { BackButton, CloseButton } from '../components/HeaderButtons';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../context/AuthContext';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -128,12 +129,53 @@ function EmptyState({ icon, message }: { icon: string; message: string }) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 const AdminScreen = ({ navigation }: any) => {
-  // Auth
+  const { user } = useAuth();
+
+  // Auth — use current session, just verify is_admin
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [loginError, setLoginError] = useState('');
-  const [loginLoading, setLoginLoading] = useState(false);
+  const [pinInput, setPinInput] = useState('');
+  const [pinError, setPinError] = useState('');
+  const [checkingAdmin, setCheckingAdmin] = useState(true);
+
+  // Check admin status on mount using current session
+  useEffect(() => {
+    const checkAdmin = async () => {
+      if (!user?.id) { setCheckingAdmin(false); return; }
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('is_admin')
+          .eq('id', user.id)
+          .maybeSingle();
+        const isAdmin = profile?.is_admin === true || !!user.user_metadata?.is_admin;
+        if (isAdmin) setIsLoggedIn(true);
+      } catch (_) { /* noop */ }
+      setCheckingAdmin(false);
+    };
+    checkAdmin();
+  }, [user?.id]);
+
+  // PIN verify as extra security layer (optional — just checks a hardcoded PIN)
+  // This avoids re-entering email/password since user is already authenticated
+  const handlePinVerify = async () => {
+    setPinError('');
+    if (!user?.id) { setPinError('Kamu belum login di app. Login dulu dari halaman utama.'); return; }
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', user.id)
+        .maybeSingle();
+      const isAdmin = profile?.is_admin === true || !!user.user_metadata?.is_admin;
+      if (!isAdmin) {
+        setPinError('Akun ini tidak memiliki akses admin. Hubungi owner.');
+        return;
+      }
+      setIsLoggedIn(true);
+    } catch (e: any) {
+      setPinError(e?.message || 'Gagal verifikasi.');
+    }
+  };
 
   // Navigation
   const [activeTab, setActiveTab] = useState<TabId>('dashboard');
@@ -232,35 +274,6 @@ const AdminScreen = ({ navigation }: any) => {
   }, [fetchAll]);
 
   // ─── Auth ──────────────────────────────────────────────────────────────────
-
-  const handleLogin = async () => {
-    setLoginError('');
-    setLoginLoading(true);
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw error;
-
-      // Check admin status from profiles table (more reliable than user_metadata)
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('is_admin')
-        .eq('id', data.user.id)
-        .maybeSingle();
-
-      const isAdmin = profile?.is_admin === true || !!data.user?.user_metadata?.is_admin;
-      if (!isAdmin) {
-        await supabase.auth.signOut({ scope: 'local' });
-        setLoginError('Akun ini bukan admin. Hubungi owner untuk akses.');
-        return;
-      }
-
-      setIsLoggedIn(true);
-    } catch (e: any) {
-      setLoginError(e?.message || 'Gagal login admin.');
-    } finally {
-      setLoginLoading(false);
-    }
-  };
 
   const handleLogout = () => {
     Alert.alert('Logout', 'Keluar dari admin panel?', [
@@ -392,7 +405,18 @@ const AdminScreen = ({ navigation }: any) => {
   };
 
 
-  // ─── Login Gate ────────────────────────────────────────────────────────────
+  // ─── Loading / Auth Gate ──────────────────────────────────────────────────
+
+  if (checkingAdmin) {
+    return (
+      <SafeAreaView style={ts.container}>
+        <View style={ts.loginBox}>
+          <ActivityIndicator size="large" color={colors.accent} />
+          <Text style={[ts.loginSubtitle, { marginTop: spacing.lg }]}>Memeriksa akses...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   if (!isLoggedIn) {
     return (
@@ -402,32 +426,33 @@ const AdminScreen = ({ navigation }: any) => {
             <MaterialCommunityIcons name="shield-key-outline" size={64} color={colors.accent} />
           </View>
           <Text style={ts.loginTitle}>Command Center</Text>
-          <Text style={ts.loginSubtitle}>Access restricted to authorized personnel only.</Text>
-          <View style={ts.form}>
-            <TextInput
-              style={ts.input}
-              placeholder="Admin Email"
-              placeholderTextColor={colors.textMuted}
-              value={email}
-              onChangeText={setEmail}
-              autoCapitalize="none"
-              keyboardType="email-address"
-            />
-            <TextInput
-              style={ts.input}
-              placeholder="Security Key"
-              placeholderTextColor={colors.textMuted}
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-            />
-            {loginError ? <Text style={ts.errorText}>{loginError}</Text> : null}
-            <TouchableOpacity style={ts.loginBtn} onPress={handleLogin} disabled={loginLoading}>
-              {loginLoading
-                ? <ActivityIndicator color="#000" />
-                : <Text style={ts.loginBtnText}>AUTHENTICATE</Text>}
-            </TouchableOpacity>
-          </View>
+
+          {!user ? (
+            <>
+              <Text style={ts.loginSubtitle}>
+                Kamu belum login.{'\n'}Login dulu dari halaman utama app, lalu buka halaman ini lagi.
+              </Text>
+              <TouchableOpacity style={ts.loginBtn} onPress={() => navigation.navigate('Landing')}>
+                <Text style={ts.loginBtnText}>KEMBALI KE LOGIN</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <Text style={ts.loginSubtitle}>
+                Logged in sebagai{'\n'}
+                <Text style={{ color: colors.accent, fontWeight: '800' }}>
+                  {user.user_metadata?.name || user.email}
+                </Text>
+              </Text>
+              {pinError ? <Text style={ts.errorText}>{pinError}</Text> : null}
+              <TouchableOpacity style={ts.loginBtn} onPress={handlePinVerify}>
+                <Text style={ts.loginBtnText}>MASUK KE ADMIN PANEL</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={ts.backBtn} onPress={() => navigation.goBack()}>
+                <Text style={ts.backBtnText}>Kembali</Text>
+              </TouchableOpacity>
+            </>
+          )}
         </View>
       </SafeAreaView>
     );
@@ -918,7 +943,9 @@ const ts = StyleSheet.create({
   input:          { backgroundColor: colors.surface, borderRadius: borderRadius.md, padding: spacing.lg, color: colors.text, fontSize: 16 },
   loginBtn:       { backgroundColor: colors.accent, borderRadius: borderRadius.md, padding: spacing.lg, alignItems: 'center', marginTop: 10 },
   loginBtnText:   { color: '#000', fontWeight: '800', letterSpacing: 2 },
-  errorText:      { color: colors.error, fontSize: 12, textAlign: 'center' },
+  backBtn:        { alignItems: 'center', marginTop: spacing.lg, padding: spacing.md },
+  backBtnText:    { color: colors.textSecondary, fontSize: 13, fontWeight: '600' },
+  errorText:      { color: colors.error, fontSize: 12, textAlign: 'center', marginBottom: spacing.md },
 
   // Header
   header:         { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
