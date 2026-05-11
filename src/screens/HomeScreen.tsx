@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, RefreshControl, Platform, Image, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, RefreshControl, Platform } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { TeslaCard } from '../components/TeslaCard';
 import { FeatureCard } from '../components/FeatureCard';
+import Bike3DViewer from '../components/Bike3DViewer';
+import { BIKE_NAMES } from '../constants/bikeRegistry';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
-
-const { width } = Dimensions.get('window');
 
 const ControlButton = ({ icon, label, active, onPress }: any) => (
   <TouchableOpacity style={ts.controlBtn} onPress={onPress} activeOpacity={0.7}>
@@ -23,6 +23,8 @@ export default function HomeScreen({ navigation }: any) {
   const displayName = user?.user_metadata?.name || user?.email?.split('@')[0] || 'Rider';
 
   const [bikeName, setBikeName] = useState('');
+  const [bikeModel, setBikeModel] = useState('Ducati Panigale V4');
+  const [engineOn, setEngineOn] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -30,8 +32,17 @@ export default function HomeScreen({ navigation }: any) {
     setLoading(true);
     if (user?.id) {
       const { data } = await supabase.from('bikes').select('*').eq('user_id', user.id).eq('is_primary', true).maybeSingle();
-      if (data) setBikeName(`${data.brand} ${data.model}`);
-      else setBikeName(user?.user_metadata?.motor || 'Motor Anda');
+      if (data) {
+        setBikeName(`${data.brand} ${data.model}`);
+        // Map to registry key
+        const registryKey = BIKE_NAMES.find((n) =>
+          n.toLowerCase().includes(data.brand?.toLowerCase() ?? '') ||
+          n.toLowerCase().includes(data.model?.toLowerCase() ?? ''),
+        );
+        if (registryKey) setBikeModel(registryKey);
+      } else {
+        setBikeName(user?.user_metadata?.motor || 'Motor Anda');
+      }
     } else {
       setBikeName('Motor Anda');
     }
@@ -84,13 +95,26 @@ export default function HomeScreen({ navigation }: any) {
         contentContainerStyle={ts.scrollContent}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />}
       >
-        {/* Hero Image */}
+        {/* 3D Bike Viewer */}
         <View style={ts.heroContainer}>
-          <Image 
-            source={require('../../assets/ducati-hero.png')} 
-            style={ts.heroImage}
-            resizeMode="contain"
+          <Bike3DViewer
+            bikeName={bikeModel}
+            engineOn={engineOn}
+            height={220}
           />
+          <TouchableOpacity
+            style={ts.engineToggle}
+            onPress={() => setEngineOn((v) => !v)}
+          >
+            <MaterialCommunityIcons
+              name={engineOn ? 'engine' : 'engine-off'}
+              size={16}
+              color={engineOn ? colors.accent : colors.textMuted}
+            />
+            <Text style={[ts.engineToggleText, engineOn && { color: colors.accent }]}>
+              {engineOn ? 'RUNNING' : 'ENGINE'}
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {/* Quick Actions */}
@@ -247,11 +271,24 @@ const ts = StyleSheet.create({
   heroContainer: { 
     height: 220, 
     width: '100%', 
-    justifyContent: 'center', 
-    alignItems: 'center',
-    marginVertical: spacing.lg
+    marginVertical: spacing.lg,
+    position: 'relative',
   },
-  heroImage: { width: width * 0.9, height: 200 },
+  engineToggle: {
+    position: 'absolute',
+    bottom: 8,
+    right: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#333',
+  },
+  engineToggleText: { color: colors.textMuted, fontSize: 9, fontWeight: '800', letterSpacing: 1 },
   controlsGrid: { 
     flexDirection: 'row', 
     justifyContent: 'space-between', 
